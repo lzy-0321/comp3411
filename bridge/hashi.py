@@ -2,16 +2,25 @@
 import numpy as np
 import sys
 
+# A bridge is a tuple (start, end, count, direction)
 class Bridge:
     def __init__(self, start, end, count, direction):
-        self.start = start
-        self.end = end
-        self.count = count
-        self.direction = direction
+        self.start = start  # Tuple (row, col), the starting point of the bridge
+        self.end = end      # Tuple (row, col), the ending point of the bridge
+        self.count = count  # The number of bridges connecting the islands
+        self.direction = direction  # 'horizontal' or 'vertical'
 
     def __repr__(self):
         return f"Bridge(start={self.start}, end={self.end}, count={self.count}, direction='{self.direction}')"
 
+# A island is a tuple (row, col, count)
+# class Island:
+#     def __init__(self, row, col, count):
+#         self.row = row
+#         self.col = col
+#         self.count = count
+#     def __repr__(self):
+#         return f"Island(row={self.row}, col={self.col}, count={self.count})"
 
 def get_bridge_symbol(count, direction):
     symbols = {
@@ -98,114 +107,48 @@ def print_map(nrow, ncol, map):
             print(code[map[r, c]], end="")
         print()
 
-def solve_puzzle(map, bridges=[], x=0, y=0):
-    if all_islands_connected(map, bridges):
-        print_map_with_bridges(map, bridges)
-        return True
+# all bridges must run horizontally or vertically
+# bridges are not allowed to cross each other, or other islands
+# there can be no more than three bridges connecting any pair of islands
+# the total number of bridges connected to each island must be equal to the number on the island
 
-    for bridge in generate_possible_bridges(map, bridges, x, y):
-        if is_bridge_valid(map, bridges, bridge):
-            bridges.append(bridge)
-            next_x, next_y = get_next_island(map, x, y)
-            if solve_puzzle(map, bridges, next_x, next_y):
-                return True  # Propagate the success back up the recursion
-            bridges.pop()  # Backtrack
+# check is a bridge crosses another bridge (A parallel bridge cannot pass through the same point as a vertical bridge)
+def check_cross(bridge, bridges):
+    for b in bridges:
+        # One is horizontal and the other is vertical
+        if bridge.direction == 'horizontal':
+            # Check if the vertical bridge crosses the horizontal one
+            if (b.start[1] >= bridge.start[1] and b.start[1] <= bridge.end[1]) and \
+                (bridge.start[0] >= b.start[0] and bridge.start[0] <= b.end[0]):
+                return True
+        else:  # bridge is vertical and b is horizontal
+            if (bridge.start[1] >= b.start[1] and bridge.start[1] <= b.end[1]) and \
+                (b.start[0] >= bridge.start[0] and b.start[0] <= bridge.end[0]):
+                return True
+    return False
+
+# for a given island, check if the number of bridges connected to it is equal to the number on the island, if is cannot add more bridges.
+def check_island_bridges(x, y, n, bridges):
+    count = 0
+    for b in bridges:
+        if b.start == (x, y) or b.end == (x, y):
+            count += b.count
+    return n == count
+
+# check is all islands are connected, going through all the islands and check_island_bridges for each one
+def check_islands_connected(nrow, ncol, map, bridges):
+    for r in range(nrow):
+        for c in range(ncol):
+            if map[r, c] != ".":
+                if not check_island_bridges(r, c, map[r, c], bridges):
+                    return False
+    return True
+
+
+def solve_puzzle(map):
+
 
     return False  # If no configuration works, backtrack
-
-def all_islands_connected(map, bridges):
-    # Create a dictionary to keep track of the number of bridges connected to each island.
-    # The key will be the island's coordinates (row, col), and the value will be the count of bridges.
-    bridge_count = {(r, c): 0 for r in range(map.shape[0]) for c in range(map.shape[1]) if map[r, c] > 0}
-
-    # Iterate over all bridges and increment the bridge count for both the start and end islands.
-    for bridge in bridges:
-        # Update the count for the start and end islands of each bridge.
-        # Note that the count is incremented by the bridge's count since it can represent 1 to 3 bridges.
-        bridge_count[bridge.start] += bridge.count
-        bridge_count[bridge.end] += bridge.count
-
-    # Check if the number of bridges connected to each island matches the number on the island.
-    for (r, c), count in bridge_count.items():
-        if map[r, c] != count:
-            return False  # Found an island with incorrect number of bridges.
-
-    return True  # All islands have the correct number of bridges.
-
-def generate_possible_bridges(map, existing_bridges, x, y):
-    potential_bridges = []
-
-    # Directions to look for potential bridges: (dx, dy)
-    directions = {'right': (0, 1), 'left': (0, -1), 'up': (-1, 0), 'down': (1, 0)}
-
-    for direction, (dx, dy) in directions.items():
-        nx, ny = x + dx, y + dy  # Start from the next cell in the direction
-
-        # Look in the direction until hitting another island or the edge of the map
-        while 0 <= nx < map.shape[0] and 0 <= ny < map.shape[1]:
-            if map[nx, ny] > 0:  # Found a potential end island
-                # Check if a bridge can be placed between (x, y) and (nx, ny)
-                if can_place_bridge(existing_bridges, (x, y), (nx, ny)):
-                    # For each possible bridge count (1-3), create a Bridge object
-                    for count in range(1, 4):  # 1 to 3 bridges
-                        if is_bridge_placement_valid(existing_bridges, x, y, nx, ny, count):
-                            potential_bridges.append(Bridge((x, y), (nx, ny), count, 'horizontal' if dx == 0 else 'vertical'))
-                break  # Stop looking in this direction after finding the first island
-            nx += dx
-            ny += dy
-
-    return potential_bridges
-
-def can_place_bridge(existing_bridges, start, end):
-    # This function checks if there's already a bridge between start and end
-    # It should also check if adding another bridge would exceed the maximum of 3
-    # Implementation depends on how existing_bridges is structured
-    # For simplicity, let's assume it's a list of Bridge objects
-    for bridge in existing_bridges:
-        if (bridge.start == start and bridge.end == end) or (bridge.start == end and bridge.end == start):
-            if bridge.count == 3:  # Already have the max number of bridges
-                return False
-    return True
-
-def is_bridge_valid(map, existing_bridges, new_bridge):
-    # Assuming bridges can only be straight lines, check if the path between
-    # the start and end points crosses any islands or other bridges.
-    start, end = new_bridge.start, new_bridge.end
-    direction = new_bridge.direction
-
-    if direction == 'horizontal':
-        fixed_row = start[0]
-        for col in range(min(start[1], end[1]) + 1, max(start[1], end[1])):
-            # Check for any island in the path
-            if map[fixed_row, col] > 0:
-                return False
-            # Check for crossing bridges
-            for bridge in existing_bridges:
-                if bridge.direction == 'vertical' and bridge.start[1] <= col <= bridge.end[1] and bridge.start[0] <= fixed_row <= bridge.end[0]:
-                    return False
-    else:  # direction == 'vertical'
-        fixed_col = start[1]
-        for row in range(min(start[0], end[0]) + 1, max(start[0], end[0])):
-            # Check for any island in the path
-            if map[row, fixed_col] > 0:
-                return False
-            # Check for crossing bridges
-            for bridge in existing_bridges:
-                if bridge.direction == 'horizontal' and bridge.start[0] <= row <= bridge.end[0] and bridge.start[1] <= fixed_col <= bridge.end[1]:
-                    return False
-
-    return True
-
-
-def get_next_island(map, x, y):
-    # Scan the map from the current position to find the next island.
-    for nx in range(x, map.shape[0]):
-        start_col = y if nx == x else 0  # Start from the next column if on the same row, else start from the first column
-        for ny in range(start_col, map.shape[1]):
-            if map[nx, ny] > 0:
-                return nx, ny
-    return None, None  # Return None if no more islands are found
-
 
 def main():
     nrow, ncol, map = scan_map()
@@ -213,11 +156,11 @@ def main():
     print_map(nrow, ncol, map)
 
     # Placeholder for solving the puzzle
-    # solve_puzzle(map)
+    solve_puzzle(map)
 
     # For now, just reprint the original map
-    # print("Solved Puzzle Map (placeholder):")
-    # print_map(nrow, ncol, map)
+    print("Solved Puzzle Map (placeholder):")
+    print_map(nrow, ncol, map)
 
 if __name__ == '__main__':
     main()
