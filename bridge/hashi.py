@@ -136,8 +136,8 @@ def add_island_bridges(r1, c1, r2, c2):
         if island.row == r2 and island.col == c2:
             island.count -= 1
 
-# minis bridges to islands
-def minis_island_bridges(r1, c1, r2, c2):
+# remove bridges to islands
+def remove_island_bridges(r1, c1, r2, c2):
     # add count to the island in island list
     for island in islands:
         if island.row == r1 and island.col == c1:
@@ -187,7 +187,7 @@ def remove_bridge(r1, c1, r2, c2, count):
                     b.count -= count
                 else:
                     return False
-    minis_island_bridges(r1, c1, r2, c2)
+    remove_island_bridges(r1, c1, r2, c2)
     return True
 
 # check is a bridge crosses another bridge (A parallel bridge cannot pass through the same point as a vertical bridge)
