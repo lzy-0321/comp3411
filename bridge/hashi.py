@@ -2,6 +2,10 @@
 import numpy as np
 import sys
 
+# define a island symbol type can be 1-9 or a-c
+ISLAND_SYMBOLS = "123456789abc"
+
+
 # A bridge is a tuple (start, end, count, direction)
 class Bridge:
     def __init__(self, start, end, count, direction):
@@ -139,10 +143,13 @@ def check_island_bridges(x, y, n, bridges):
 def check_islands_connected(nrow, ncol, map, bridges):
     for r in range(nrow):
         for c in range(ncol):
-            if map[r, c] != ".":
+            # if it is a island
+            if map[r, c] == ISLAND_SYMBOLS:
                 if not check_island_bridges(r, c, map[r, c], bridges):
                     return False
     return True
+
+# add bridges for a given island, add all possible bridges for a given island
 
 
 def solve_puzzle(map):
