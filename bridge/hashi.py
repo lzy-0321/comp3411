@@ -206,28 +206,19 @@ def check_cross(bridge):
     return False
 
 # return the number of bridges connected to a island
-def count_island_bridges(r, c):
-    count = 0
-    for b in bridges:
-        # for horizontal bridge
-        if b.start[0] == b.end[0] and b.start[0] == r:
-            if (b.start[1] == c + 1  and b.end[1] >= c) or (b.end[1] == c - 1 and b.start[1] <= c):
-                count += b.count
-        # for vertical bridge
-        elif b.start[1] == b.end[1] and b.start[1] == c:
-            if (b.start[0] == r + 1 and b.end[0] >= r) or (b.end[0] == r - 1 and b.start[0] <= r):
-                count += b.count
-    return count
+def count_island_bridges(r, c, map):
+    need = convert_char_to_num(str(map[r, c]))
+    return need - get_island_connectable_bridges(r, c, map)
 
 # return the number can be connected to a island
 def get_island_connectable_bridges(r, c, map):
-    count = count_island_bridges(r, c)
-    needed = int(map[r, c])
-    return needed - count
+    for island in islands:
+        if island.row == r and island.col == c:
+            return island.count
 
 # for a given island, check if the number of bridges connected to it is equal to the number on the island, if is cannot add more bridges.
-def check_island_bridges(r, c, n):
-    count = count_island_bridges(r, c)
+def check_island_bridges(r, c, n, map):
+    count = count_island_bridges(r, c, map)
     print(r, c, n, count)
     return n == count
 
@@ -239,7 +230,7 @@ def all_islands_connected(nrow, ncol, map):
             # if is a island, check if the number of bridges connected to it is equal to the number on the island
             if symbol in ISLAND_SYMBOLS:
                 island_number = convert_char_to_num(symbol)
-                if not check_island_bridges(r, c, island_number):
+                if not check_island_bridges(r, c, island_number, map):
                     return False
     return True
 
@@ -283,7 +274,7 @@ def apply_just_enough_neighbor_technique(nrow, ncol, map):
                 if len(neighbors) == island_number or sum([neighbor[1] for neighbor in neighbors]) == island_number:
                     for neighbor in neighbors:
                         add_bridge(r, c, neighbor[0][0], neighbor[0][1], neighbor[1])
-                if len(neighbors) == 1 and island_number - count_island_bridges(r, c) == 1:
+                if len(neighbors) == 1 and island_number - count_island_bridges(r, c, map) == 1:
                     add_bridge(r, c, neighbors[0][0], neighbors[0][1], 1)
 
 # 少数邻居技巧（Few Neighbors Technique）：这个技巧基于桥梁数量的限制规则，如果一个岛屿仅能与有限的几个岛屿建立桥梁，那么会使用此技巧来确定桥梁的分配。
@@ -296,7 +287,7 @@ def apply_hashi_techniques(nrow, ncol, map):
 
 def dfs_solve(nrow, ncol, map):
     # 如果所有岛屿都正确连接，则返回成功
-    if all_islands_connected(map):
+    if all_islands_connected(nrow, ncol, map):
         return True
 
     return False
