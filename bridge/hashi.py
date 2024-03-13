@@ -2,9 +2,20 @@
 import numpy as np
 import sys
 
-# define a island symbol type can be 1-9 or a-c
+# define a island symbol type can be 1-9 or a-c, signal symbol for the island
 ISLAND_SYMBOLS = "123456789abc"
 
+# def island_symbol_to_number(symbol):
+#     if symbol in '123456789':
+#         return int(symbol)
+#     elif symbol == 'a':
+#         return 10
+#     elif symbol == 'b':
+#         return 11
+#     elif symbol == 'c':
+#         return 12
+#     else:
+#         return None  # 非岛屿字符返回None
 
 # A bridge is a tuple (start, end, count, direction)
 class Bridge:
@@ -37,36 +48,34 @@ def get_bridge_symbol(count, direction):
     }
     return symbols.get((count, direction), ' ')
 
-def add_bridges_to_map(original_map, bridges):
-    # Create a visual representation of the map based on the original map
-    nrow, ncol = original_map.shape
-    visual_map = [[' ' if original_map[r, c] == 0 else '.' for c in range(ncol)] for r in range(nrow)]
 
-    for bridge in bridges:
-        start, end, count, direction = bridge
-        symbol = get_bridge_symbol(count, direction)
-
-        if direction == 'horizontal':
-            row = start[0]
-            for col in range(start[1], end[1] + 1):  # Ensure correct range for bridge placement
-                visual_map[row][col] = symbol
-        else:  # direction == 'vertical'
-            col = start[1]
-            for row in range(start[0], end[0] + 1):  # Ensure correct range for bridge placement
-                visual_map[row][col] = symbol
-
+def add_bridges_to_map(nrow, ncol, original_map, bridges):
+    #if is a island, then is the island, if is a bridge, add the bridge, overwise is a space
+    visual_map = [[' ' for _ in range(ncol)] for _ in range(nrow)]
+    for r in range(nrow):
+        for c in range(ncol):
+            if original_map[r, c] != 0:
+                visual_map[r][c] = original_map[r, c]
+    for b in bridges:
+        if b.direction == 'horizontal':
+            for c in range(b.start[1], b.end[1] + 1):
+                visual_map[b.start[0]][c] = get_bridge_symbol(b.count, b.direction)
+        else:
+            for r in range(b.start[0], b.end[0] + 1):
+                visual_map[r][b.start[1]] = get_bridge_symbol(b.count, b.direction)
     return visual_map
 
-def print_map_with_bridges(original_map, bridges):
-    # Adjust map dimensions as necessary
-    nrow, ncol = original_map.shape
-
-    # Add bridges to the visual map based on the original map
-    visual_map = add_bridges_to_map(original_map, bridges)
-
-    # Print the map
-    for row in visual_map:
-        print(''.join(row))
+# if is a island, print the island, if is a bridge, print the bridge, overwise print a space
+def print_map_with_bridges(nrow, ncol, original_map, bridges):
+    visual_map = add_bridges_to_map(nrow, ncol, original_map, bridges)
+    for r in range(nrow):
+        for c in range(ncol):
+            # if is 10, 11, 12, then print a, b, c
+            if visual_map[r][c] in range(9, 13):
+                print(chr(visual_map[r][c] + 87), end="")
+            else:
+                print(visual_map[r][c], end="")
+        print()
 
 def scan_map():
     """
@@ -132,42 +141,118 @@ def check_cross(bridge, bridges):
     return False
 
 # for a given island, check if the number of bridges connected to it is equal to the number on the island, if is cannot add more bridges.
-def check_island_bridges(x, y, n, bridges):
+def check_island_bridges(r, c, n, bridges):
     count = 0
     for b in bridges:
-        if b.start == (x, y) or b.end == (x, y):
-            count += b.count
+        # for horizontal bridge
+        if b.start[0] == b.end[0] and b.start[0] == r:
+            if (b.start[1] == c + 1  and b.end[1] >= c) or (b.end[1] == c - 1 and b.start[1] <= c):
+                count += b.count
+        # for vertical bridge
+        elif b.start[1] == b.end[1] and b.start[1] == c:
+            if (b.start[0] == r + 1 and b.end[0] >= r) or (b.end[0] == r - 1 and b.start[0] <= r):
+                count += b.count
+    print(r, c, n, count)
     return n == count
 
 # check is all islands are connected, going through all the islands and check_island_bridges for each one
 def check_islands_connected(nrow, ncol, map, bridges):
     for r in range(nrow):
         for c in range(ncol):
-            # if it is a island
-            if map[r, c] == ISLAND_SYMBOLS:
-                if not check_island_bridges(r, c, map[r, c], bridges):
+            symbol = str(map[r, c])
+            # if is a island, check if the number of bridges connected to it is equal to the number on the island
+            if symbol in ISLAND_SYMBOLS:
+                island_number = convert_char_to_num(symbol)
+                if not check_island_bridges(r, c, island_number, bridges):
                     return False
     return True
 
-# add bridges for a given island, add all possible bridges for a given island
+# # 检查桥两端的island增加的最大桥数
+# def check_max_bridges(start, end, bridges, map):
+#     # 检查桥两端的island增加的最大桥数
+#     if start[0] == end[0]:  # 横向桥
+#         # 横向桥的两端的island的最大桥数
+#         max_bridges = island_symbol_to_number(map[start[0], start[1]]) - 1
+#         # 横向桥的两端的island的已有桥数
+#         for b in bridges:
+#             if b.start[0] == start[0] and b.start[1] < end[1] and b.end[1] > start[1]:
+#                 max_bridges -= b.count
+#         return max_bridges
+#     else:  # 纵向桥
+#         # 纵向桥的两端的island的最大桥数
+#         max_bridges = island_symbol_to_number(map[start[0], start[1]]) - 1
+#         # 纵向桥的两端的island的已有桥数
+#         for b in bridges:
+#             if b.start[1] == start[1] and b.start[0] < end[0] and b.end[0] > start[0]:
+#                 max_bridges -= b.count
+#         return max_bridges
+
+# # add bridge
+# def add_bridge(start, end, count, direction, bridges, map):
+#     # check if the bridge crosses another bridge
+#     if check_cross(Bridge(start, end, count, direction), bridges):
+#         return False
+#     # check if the bridge is already in the list
+#     for b in bridges:
+#         if b.start == start and b.end == end and b.direction == direction:
+#             # add the count to the bridge
+#             b.count += count
+#             return True
+#     # add the bridge to the list
+#     bridges.append(Bridge(start, end, count, direction))
 
 
-def solve_puzzle(map):
+def solve_puzzle(map, bridges):
+    # loop through all the islands
+
+    #test2.txt
+    #..1..
+    #.....
+    #1...1
+    #.....
+    #1.2.2
+    #add a bridge from between 1...1
+
+    # # test for print_map_with_bridges
+    # bridges.append(Bridge((2, 1), (2, 3), 1, 'horizontal'))
+    # #test for check_cross
+    # print(check_cross(Bridge((1, 2), (3, 2), 1, 'vertical'), bridges))
+
+    # # test for check_islands_connected
+    # bridges.append(Bridge((1, 2), (3, 2), 1, 'vertical'))
+    # bridges.append(Bridge((3, 0), (3, 0), 1, 'vertical'))
+    # bridges.append(Bridge((3, 4), (3, 4), 1, 'vertical'))
+    # bridges.append(Bridge((4, 1), (4, 1), 1, 'horizontal'))
+    # bridges.append(Bridge((4, 3), (4, 3), 1, 'horizontal'))
+    # print(bridges)
+    # print(check_islands_connected(5, 5, map, bridges))
 
 
+    # test for 12
+    #test3.txt
+    # ..3..
+    # .....
+    # 3.c.3
+    # .....
+    # ..3..
+    # bridges.append(Bridge((1, 2), (1, 2), 3, 'vertical'))
+    # bridges.append(Bridge((3, 2), (3, 2), 3, 'vertical'))
+    # bridges.append(Bridge((2, 1), (2, 1), 3, 'horizontal'))
+    # bridges.append(Bridge((2, 3), (2, 3), 3, 'horizontal'))
+    # print(check_islands_connected(5, 5, map, bridges))
     return False  # If no configuration works, backtrack
 
 def main():
     nrow, ncol, map = scan_map()
     print("Scanned Puzzle Map:")
     print_map(nrow, ncol, map)
-
+    Bridges = []
     # Placeholder for solving the puzzle
-    solve_puzzle(map)
+    solve_puzzle(map, Bridges)
 
     # For now, just reprint the original map
     print("Solved Puzzle Map (placeholder):")
-    print_map(nrow, ncol, map)
+    print_map_with_bridges(nrow, ncol, map, Bridges)
 
 if __name__ == '__main__':
     main()
