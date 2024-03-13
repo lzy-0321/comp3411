@@ -5,19 +5,8 @@ import sys
 # define a island symbol type can be 1-9 or a-c, signal symbol for the island
 ISLAND_SYMBOLS = "123456789abc"
 
-# def island_symbol_to_number(symbol):
-#     if symbol in '123456789':
-#         return int(symbol)
-#     elif symbol == 'a':
-#         return 10
-#     elif symbol == 'b':
-#         return 11
-#     elif symbol == 'c':
-#         return 12
-#     else:
-#         return None  # 非岛屿字符返回None
-
 # A bridge is a tuple (start, end, count, direction)
+# assume all brigde is from left to right or from top to bottom
 class Bridge:
     def __init__(self, start, end, count, direction):
         self.start = start  # Tuple (row, col), the starting point of the bridge
@@ -140,8 +129,8 @@ def check_cross(bridge, bridges):
                 return True
     return False
 
-# for a given island, check if the number of bridges connected to it is equal to the number on the island, if is cannot add more bridges.
-def check_island_bridges(r, c, n, bridges):
+# return the number of bridges connected to a island
+def count_island_bridges(r, c, bridges):
     count = 0
     for b in bridges:
         # for horizontal bridge
@@ -152,6 +141,17 @@ def check_island_bridges(r, c, n, bridges):
         elif b.start[1] == b.end[1] and b.start[1] == c:
             if (b.start[0] == r + 1 and b.end[0] >= r) or (b.end[0] == r - 1 and b.start[0] <= r):
                 count += b.count
+    return count
+
+# return the number can be connected to a island
+def get_island_connectable_bridges(r, c, map, bridges):
+    count = count_island_bridges(r, c, bridges)
+    needed = int(map[r, c])
+    return needed - count
+
+# for a given island, check if the number of bridges connected to it is equal to the number on the island, if is cannot add more bridges.
+def check_island_bridges(r, c, n, bridges):
+    count = count_island_bridges(r, c, bridges)
     print(r, c, n, count)
     return n == count
 
@@ -167,80 +167,77 @@ def check_islands_connected(nrow, ncol, map, bridges):
                     return False
     return True
 
-# # 检查桥两端的island增加的最大桥数
-# def check_max_bridges(start, end, bridges, map):
-#     # 检查桥两端的island增加的最大桥数
-#     if start[0] == end[0]:  # 横向桥
-#         # 横向桥的两端的island的最大桥数
-#         max_bridges = island_symbol_to_number(map[start[0], start[1]]) - 1
-#         # 横向桥的两端的island的已有桥数
-#         for b in bridges:
-#             if b.start[0] == start[0] and b.start[1] < end[1] and b.end[1] > start[1]:
-#                 max_bridges -= b.count
-#         return max_bridges
-#     else:  # 纵向桥
-#         # 纵向桥的两端的island的最大桥数
-#         max_bridges = island_symbol_to_number(map[start[0], start[1]]) - 1
-#         # 纵向桥的两端的island的已有桥数
-#         for b in bridges:
-#             if b.start[1] == start[1] and b.start[0] < end[0] and b.end[0] > start[0]:
-#                 max_bridges -= b.count
-#         return max_bridges
+# add a bridge to the bridges list, input is the island location, add the bridge location
+def add_bridge(r1, c1, r2, c2, count, bridges):
+    # all brigde is from left to right or from top to bottom
+    if r1 == r2:
+        # if c1 > c2, then swap c1 and c2
+        if c1 > c2:
+            c1, c2 = c2, c1
+        bridges.append(Bridge((r1, c1+1), (r2, c2-1), count, 'horizontal'))
+    else:
+        if r1 > r2:
+            r1, r2 = r2, r1
+        bridges.append(Bridge((r1+1, c1), (r2-1, c2), count, 'vertical'))
 
-# # add bridge
-# def add_bridge(start, end, count, direction, bridges, map):
-#     # check if the bridge crosses another bridge
-#     if check_cross(Bridge(start, end, count, direction), bridges):
-#         return False
-#     # check if the bridge is already in the list
-#     for b in bridges:
-#         if b.start == start and b.end == end and b.direction == direction:
-#             # add the count to the bridge
-#             b.count += count
-#             return True
-#     # add the bridge to the list
-#     bridges.append(Bridge(start, end, count, direction))
+def get_island_neighbors(r, c, nrow, ncol, map, bridges):
+    # 找到一个岛屿的4个方向存在的最近岛屿
+    neighbors = []
+    # 向四个方向查找，如果是岛屿，加入neighbors
+    for i in reversed(range(0, r-1)):
+        if map[i, c] != 0:
+            neighbors.append([(i, c), get_island_connectable_bridges(i, c, map, bridges)])
+            break
+    for i in range(r+1, nrow):
+        if map[i, c] != 0:
+            neighbors.append([(i, c), get_island_connectable_bridges(i, c, map, bridges)])
+            break
+    for j in reversed(range(0, c-1)):
+        if map[r, j] != 0:
+            neighbors.append([(r, j), get_island_connectable_bridges(r, j, map, bridges)])
+            break
+    for j in range(c+1, ncol):
+        if map[r, j] != 0:
+            neighbors.append([(r, j), get_island_connectable_bridges(r, j, map, bridges)])
+            break
+    print(neighbors)
+    return neighbors
+
+# 刚好足够的邻居技巧（Just Enough Neighbor Technique）：当一个岛屿周围的邻居数量与岛屿上的数字相匹配时，这个技巧会用来确定所有的桥梁。这意味着如果一个岛屿标记为“4”，并且它有四个邻居，则应该与每个邻居建立一座桥。
+def apply_just_enough_neighbor_technique(nrow, ncol, map, bridges):
+    for r in range(nrow):
+        for c in range(ncol):
+            symbol = str(map[r, c])
+            if symbol in ISLAND_SYMBOLS:
+                island_number = convert_char_to_num(symbol)
+                neighbors = get_island_neighbors(r, c, nrow, ncol, map, bridges)
+                # 1. 岛屿周围的邻居数量与岛屿上的数字相匹配
+                # 2. 岛屿上的桥梁总数量与岛屿周围的邻居需要的总和数量相匹配
+                if len(neighbors) == island_number or sum([neighbor[1] for neighbor in neighbors]) == island_number:
+                    for neighbor in neighbors:
+                        add_bridge(r, c, neighbor[0][0], neighbor[0][1], neighbor[1], bridges)
+
+# 单一未解决的邻居技巧（One Unsolved Neighbor Technique）：如果一个岛屿只有一个尚未连接的邻居，并且该岛屿还需要一座桥来完成其桥梁数量，那么这座桥必须建在这两个岛屿之间。
+
+# 少数邻居技巧（Few Neighbors Technique）：这个技巧基于桥梁数量的限制规则，如果一个岛屿仅能与有限的几个岛屿建立桥梁，那么会使用此技巧来确定桥梁的分配。
+
+# 剩余技巧（Leftovers Technique）：当一个岛屿的剩余桥数等于其剩余未连接邻居数时使用。这意味着这些桥必须以某种方式分布于剩余的邻居之间。
+
+# 隔离技巧（Isolation Technique）：这是一个关键技巧，它利用了每个岛屿都必须相互连接的规则。如果不连接某些桥梁会导致某个岛屿或岛屿群隔离，那么这些连接就必须建立。
+def apply_hashi_techniques(nrow, ncol, map, bridges):
+    apply_just_enough_neighbor_technique(nrow, ncol, map, bridges)
 
 
-def solve_puzzle(map, bridges):
-    # loop through all the islands
+def solve_puzzle(nrow, ncol, map, bridges):
+    # 先尝试使用Hashi解题技巧
+    apply_hashi_techniques(nrow, ncol, map, bridges)
 
-    #test2.txt
-    #..1..
-    #.....
-    #1...1
-    #.....
-    #1.2.2
-    #add a bridge from between 1...1
-
-    # # test for print_map_with_bridges
-    # bridges.append(Bridge((2, 1), (2, 3), 1, 'horizontal'))
-    # #test for check_cross
-    # print(check_cross(Bridge((1, 2), (3, 2), 1, 'vertical'), bridges))
-
-    # # test for check_islands_connected
-    # bridges.append(Bridge((1, 2), (3, 2), 1, 'vertical'))
-    # bridges.append(Bridge((3, 0), (3, 0), 1, 'vertical'))
-    # bridges.append(Bridge((3, 4), (3, 4), 1, 'vertical'))
-    # bridges.append(Bridge((4, 1), (4, 1), 1, 'horizontal'))
-    # bridges.append(Bridge((4, 3), (4, 3), 1, 'horizontal'))
-    # print(bridges)
-    # print(check_islands_connected(5, 5, map, bridges))
-
-
-    # test for 12
-    #test3.txt
-    # ..3..
-    # .....
-    # 3.c.3
-    # .....
-    # ..3..
-    # bridges.append(Bridge((1, 2), (1, 2), 3, 'vertical'))
-    # bridges.append(Bridge((3, 2), (3, 2), 3, 'vertical'))
-    # bridges.append(Bridge((2, 1), (2, 1), 3, 'horizontal'))
-    # bridges.append(Bridge((2, 3), (2, 3), 3, 'horizontal'))
-    # print(check_islands_connected(5, 5, map, bridges))
-    return False  # If no configuration works, backtrack
+    # 检查是否所有岛屿都已经连接
+    if not check_islands_connected(nrow, ncol, map, bridges):
+        # 使用DFS尝试解决未解决的部分
+        # if not dfs_solve(nrow, ncol, map, bridges):
+            return False  # 如果DFS失败，则谜题无解
+    return True
 
 def main():
     nrow, ncol, map = scan_map()
@@ -248,12 +245,9 @@ def main():
     print_map(nrow, ncol, map)
     Bridges = []
     # Placeholder for solving the puzzle
-    solve_puzzle(map, Bridges)
-
-    # For now, just reprint the original map
-    print("Solved Puzzle Map (placeholder):")
+    solve_puzzle(nrow, ncol, map, Bridges)
+    print("Solved Puzzle Map:")
     print_map_with_bridges(nrow, ncol, map, Bridges)
-
 if __name__ == '__main__':
     main()
 
