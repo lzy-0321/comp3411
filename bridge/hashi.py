@@ -219,7 +219,7 @@ def get_island_connectable_bridges(r, c, map):
 # for a given island, check if the number of bridges connected to it is equal to the number on the island, if is cannot add more bridges.
 def check_island_bridges(r, c, n, map):
     count = count_island_bridges(r, c, map)
-    print(r, c, n, count)
+    # print(r, c, n, count)
     return n == count
 
 # check is all islands are connected, going through all the islands and check_island_bridges for each one
@@ -254,7 +254,7 @@ def get_island_neighbors(r, c, nrow, ncol, map):
         if map[r, j] != 0:
             neighbors.append([(r, j), get_island_connectable_bridges(r, j, map)])
             break
-    print(neighbors)
+    # print(neighbors)
     return neighbors
 
 # 刚好足够的邻居技巧（Just Enough Neighbor Technique）：当一个岛屿周围的邻居数量与岛屿上的数字相匹配时，这个技巧会用来确定所有的桥梁。这意味着如果一个岛屿标记为“4”，并且它有四个邻居，则应该与每个邻居建立一座桥。
