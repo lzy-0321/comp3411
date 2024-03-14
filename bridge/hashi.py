@@ -5,30 +5,152 @@ import sys
 # define a island symbol type can be 1-9 or a-c, signal symbol for the island
 ISLAND_SYMBOLS = "123456789abc"
 
+# gable variable
+bridges = []
+islands = []
+
 # A bridge is a tuple (start, end, count, direction)
 # assume all brigde is from left to right or from top to bottom
 class Bridge:
-    def __init__(self, start, end, count, direction):
+    def __init__(self, start, end, weight, direction):
         self.start = start  # Tuple (row, col), the starting point of the bridge
         self.end = end      # Tuple (row, col), the ending point of the bridge
-        self.count = count  # The number of bridges connecting the islands
+        self.weight = weight  # The number of bridges connecting the islands
         self.direction = direction  # 'horizontal' or 'vertical'
 
     def __repr__(self):
-        return f"Bridge(start={self.start}, end={self.end}, count={self.count}, direction='{self.direction}')"
+        return f"Bridge(start={self.start}, end={self.end}, weight={self.weight}, direction={self.direction})"
+
+    def get_bridges():
+        return bridges
+
+    # add a bridge to the bridges list
+    def add_bridge(r1, c1, r2, c2, weight):
+        if r1 == r2:
+            if c1 > c2:
+                c1, c2 = c2, c1
+            bridges.append(Bridge((r1, c1+1), (r2, c2-1), weight, 'horizontal'))
+        else:
+            if r1 > r2:
+                r1, r2 = r2, r1
+            bridges.append(Bridge((r1+1, c1), (r2-1, c2), weight, 'vertical'))
+
+    # remove the bridge
+    def remove_bridge(r1, c1, r2, c2, weight):
+        if r1 == r2:
+            if c1 > c2:
+                c1, c2 = c2, c1
+            for b in bridges:
+                if b.start == (r1, c1+1) and b.end == (r2, c2-1):
+                    if b.weight == weight:
+                        bridges.remove(b)
+                    elif b.weight > weight:
+                        b.weight -= weight
+                    else:
+                        return False
+        else:
+            if r1 > r2:
+                r1, r2 = r2, r1
+            for b in bridges:
+                if b.start == (r1+1, c1) and b.end == (r2-1, c2):
+                    if b.weight == weight:
+                        bridges.remove(b)
+                    elif b.weight > weight:
+                        b.weight -= weight
+                    else:
+                        return False
 
 # A island is a tuple (row, col, count)
 class Island:
-    def __init__(self, row, col, count):
-        self.row = row
-        self.col = col
-        self.count = count
-    def __repr__(self):
-        return f"Island(row={self.row}, col={self.col}, count={self.count})"
+    island_id = 0
+    max_single_edges = 3
+    def __init__(self, location, weight):
+        self.id = Island.island_id
+        Island.island_id += 1
+        self.loc = location
+        self.weight_left = weight
+        self.max_degree = weight
+        self.neighbors = []
 
-# goable variable
-bridges = []
-islands = []
+    def __repr__(self):
+        return f"Island(id={self.id}, loc={self.loc}, weight_left={self.weight_left}, neighbors={self.neighbors})"
+
+    # add a island to the islands list
+    def add_island(location, weight):
+        islands.append(Island(location, weight))
+
+    # get island
+    def get_island_by_id(id):
+        for island in islands:
+            if island.id == id:
+                return island
+        return None
+
+    # get island by location
+    def get_island_by_loc(r, c):
+        for island in islands:
+            if island.loc == (r, c):
+                return island
+        return None
+
+    # get the list of islands
+    def get_list_of_islands():
+        if len(islands) == 0:
+            return 'No islands found.'
+        return islands
+
+    # check if the island is full
+    def is_full(self):
+        return self.weight_left == 0
+
+    # is all full?
+    def all_full():
+        for island in islands:
+            if not island.is_full():
+                return False
+        return True
+
+    # get the neighbors of the island
+    def get_neighbors(self):
+        return self.neighbors
+
+    # get number of neighbors
+    def get_number_of_neighbors(self):
+        return len(self.neighbors)
+
+    # add a neighbor to the island, neighbor is a island
+    def add_neighbor(self, neighbor, weight):
+        self.neighbors.append(neighbor)
+        self.weight_left -= weight
+
+    # remove a neighbor from the island, neighbor is a island
+    def remove_neighbor(self, neighbor, weight):
+        self.neighbors.remove(neighbor)
+        self.weight_left += weight
+
+    def get_island_neighbors(self, nrow, ncol, map):
+        r = self.loc[0]
+        c = self.loc[1]
+        for i in reversed(range(0, r-1)):
+            if map[i, c] != 0:
+                neighbor = Island.get_island_by_loc(i, c)
+                self.neighbors.append(neighbor.id)
+                break
+        for i in range(r+1, nrow):
+            if map[i, c] != 0:
+                neighbor = Island.get_island_by_loc(i, c)
+                self.neighbors.append(neighbor.id)
+                break
+        for j in reversed(range(0, c-1)):
+            if map[r, j] != 0:
+                neighbor = Island.get_island_by_loc(r, j)
+                self.neighbors.append(neighbor.id)
+                break
+        for j in range(c+1, ncol):
+            if map[r, j] != 0:
+                neighbor = Island.get_island_by_loc(r, j)
+                self.neighbors.append(neighbor.id)
+                break
 
 def get_bridge_symbol(count, direction):
     symbols = {
@@ -52,10 +174,10 @@ def add_bridges_to_map(nrow, ncol, original_map):
     for b in bridges:
         if b.direction == 'horizontal':
             for c in range(b.start[1], b.end[1] + 1):
-                visual_map[b.start[0]][c] = get_bridge_symbol(b.count, b.direction)
+                visual_map[b.start[0]][c] = get_bridge_symbol(b.weight, b.direction)
         else:
             for r in range(b.start[0], b.end[0] + 1):
-                visual_map[r][b.start[1]] = get_bridge_symbol(b.count, b.direction)
+                visual_map[r][b.start[1]] = get_bridge_symbol(b.weight, b.direction)
     return visual_map
 
 # if is a island, print the island, if is a bridge, print the bridge, overwise print a space
@@ -88,6 +210,9 @@ def scan_map():
     for r in range(nrow):
         for c in range(ncol):
             map[r, c] = text[r][c]
+            # Add islands to the islands list
+            if text[r][c] in range(1, 13):
+                Island.add_island((r, c), text[r][c])
 
     return nrow, ncol, map
 
@@ -118,76 +243,24 @@ def print_map(nrow, ncol, map):
 # there can be no more than three bridges connecting any pair of islands
 # the total number of bridges connected to each island must be equal to the number on the island
 
-# get_list_of_islands
-def get_list_of_islands(nrow, ncol, map):
-    for r in range(nrow):
-        for c in range(ncol):
-            symbol = str(map[r, c])
-            if symbol in ISLAND_SYMBOLS:
-                island_number = convert_char_to_num(symbol)
-                islands.append(Island(r, c, island_number))
-
-# add bridges to islands
-def add_island_bridges(r1, c1, r2, c2):
-    # minis count to the island in island list
-    for island in islands:
-        if island.row == r1 and island.col == c1:
-            island.count -= 1
-        if island.row == r2 and island.col == c2:
-            island.count -= 1
-
-# remove bridges to islands
-def remove_island_bridges(r1, c1, r2, c2):
-    # add count to the island in island list
-    for island in islands:
-        if island.row == r1 and island.col == c1:
-            island.count += 1
-        if island.row == r2 and island.col == c2:
-            island.count += 1
-
 # add a bridge to the bridges list, input is the island location, add the bridge location
-def add_bridge(r1, c1, r2, c2, count):
-    # all brigde is from left to right or from top to bottom
-    if r1 == r2:
-        # if c1 > c2, then swap c1 and c2
-        if c1 > c2:
-            c1, c2 = c2, c1
-        if check_cross(Bridge((r1, c1), (r2, c2), count, 'horizontal')):
-            return False
-        bridges.append(Bridge((r1, c1+1), (r2, c2-1), count, 'horizontal'))
-    else:
-        if r1 > r2:
-            r1, r2 = r2, r1
-        if check_cross(Bridge((r1, c1), (r2, c2), count, 'vertical')):
-            return False
-        bridges.append(Bridge((r1+1, c1), (r2-1, c2), count, 'vertical'))
-    add_island_bridges(r1, c1, r2, c2)
+def add_bridge(island, neighbor, weight):
+    # all bridges are from left to right or from top to bottom
+    if island is None or neighbor is None:
+        return False
+    r1, c1 = island.loc
+    r2, c2 = neighbor.loc
+    Bridge.add_bridge(r1, c1, r2, c2, weight)
+    Island.add_neighbor(island, neighbor, weight)
     return True
 
-def remove_bridge(r1, c1, r2, c2, count):
-    if r1 == r2:
-        if c1 > c2:
-            c1, c2 = c2, c1
-        for b in bridges:
-            if b.start == (r1, c1+1) and b.end == (r2, c2-1):
-                if b.count == count:
-                    bridges.remove(b)
-                elif b.count > count:
-                    b.count -= count
-                else:
-                    return False
-    else:
-        if r1 > r2:
-            r1, r2 = r2, r1
-        for b in bridges:
-            if b.start == (r1+1, c1) and b.end == (r2-1, c2):
-                if b.count == count:
-                    bridges.remove(b)
-                elif b.count > count:
-                    b.count -= count
-                else:
-                    return False
-    remove_island_bridges(r1, c1, r2, c2)
+def remove_bridge(island, neighbor, weight):
+    if island is None or neighbor is None:
+        return False
+    r1, c1 = island.loc
+    r2, c2 = neighbor.loc
+    Bridge.remove_bridge(r1, c1, r2, c2, weight)
+    Island.remove_neighbor(island, neighbor, weight)
     return True
 
 # check is a bridge crosses another bridge (A parallel bridge cannot pass through the same point as a vertical bridge)
@@ -205,58 +278,6 @@ def check_cross(bridge):
                 return True
     return False
 
-# return the number of bridges connected to a island
-def count_island_bridges(r, c, map):
-    need = convert_char_to_num(str(map[r, c]))
-    return need - get_island_connectable_bridges(r, c, map)
-
-# return the number can be connected to a island
-def get_island_connectable_bridges(r, c, map):
-    for island in islands:
-        if island.row == r and island.col == c:
-            return island.count
-
-# for a given island, check if the number of bridges connected to it is equal to the number on the island, if is cannot add more bridges.
-def check_island_bridges(r, c, n, map):
-    count = count_island_bridges(r, c, map)
-    # print(r, c, n, count)
-    return n == count
-
-# check is all islands are connected, going through all the islands and check_island_bridges for each one
-def all_islands_connected(nrow, ncol, map):
-    for r in range(nrow):
-        for c in range(ncol):
-            symbol = str(map[r, c])
-            # if is a island, check if the number of bridges connected to it is equal to the number on the island
-            if symbol in ISLAND_SYMBOLS:
-                island_number = convert_char_to_num(symbol)
-                if not check_island_bridges(r, c, island_number, map):
-                    return False
-    return True
-
-def get_island_neighbors(r, c, nrow, ncol, map):
-    # 找到一个岛屿的4个方向存在的最近岛屿
-    neighbors = []
-    # 向四个方向查找，如果是岛屿，加入neighbors
-    for i in reversed(range(0, r-1)):
-        if map[i, c] != 0:
-            neighbors.append([(i, c), get_island_connectable_bridges(i, c, map)])
-            break
-    for i in range(r+1, nrow):
-        if map[i, c] != 0:
-            neighbors.append([(i, c), get_island_connectable_bridges(i, c, map)])
-            break
-    for j in reversed(range(0, c-1)):
-        if map[r, j] != 0:
-            neighbors.append([(r, j), get_island_connectable_bridges(r, j, map)])
-            break
-    for j in range(c+1, ncol):
-        if map[r, j] != 0:
-            neighbors.append([(r, j), get_island_connectable_bridges(r, j, map)])
-            break
-    # print(neighbors)
-    return neighbors
-
 # 刚好足够的邻居技巧（Just Enough Neighbor Technique）：当一个岛屿周围的邻居数量与岛屿上的数字相匹配时，这个技巧会用来确定所有的桥梁。这意味着如果一个岛屿标记为“4”，并且它有四个邻居，则应该与每个邻居建立一座桥。
 # 单一未解决的邻居技巧（One Unsolved Neighbor Technique）：如果一个岛屿只有一个尚未连接的邻居，并且该岛屿还需要一座桥来完成其桥梁数量，那么这座桥必须建在这两个岛屿之间。
 def apply_just_enough_neighbor_technique(nrow, ncol, map):
@@ -264,18 +285,15 @@ def apply_just_enough_neighbor_technique(nrow, ncol, map):
         for c in range(ncol):
             symbol = str(map[r, c])
             if symbol in ISLAND_SYMBOLS:
-                island_number = convert_char_to_num(symbol)
-                neighbors = get_island_neighbors(r, c, nrow, ncol, map)
-                # 1. 岛屿周围的邻居数量与岛屿上的数字相匹配
-                # 2. 岛屿上的桥梁总数量与岛屿周围的邻居需要的总和数量相匹配
-                # or
-                # 1. 岛屿只有一个尚未连接的邻居
-                # 2. 该岛屿还需要一座桥来完成其桥梁数量
-                if len(neighbors) == island_number or sum([neighbor[1] for neighbor in neighbors]) == island_number:
+                island_temp = Island.get_island_by_loc(r, c)
+                neighbor_ids = Island.get_neighbors(island_temp)  # Assuming this returns a list of IDs or coordinates
+
+                # Convert neighbor IDs or coordinates to Island objects
+                neighbors = [Island.get_island_by_id(id) for id in neighbor_ids]
+
+                if len(neighbors) == island_temp.weight_left or sum([neighbor.weight_left for neighbor in neighbors]) == island_temp.weight_left:
                     for neighbor in neighbors:
-                        add_bridge(r, c, neighbor[0][0], neighbor[0][1], neighbor[1])
-                if len(neighbors) == 1 and island_number - count_island_bridges(r, c, map) == 1:
-                    add_bridge(r, c, neighbors[0][0], neighbors[0][1], 1)
+                        add_bridge(island_temp, neighbor, neighbor.weight_left)
 
 # 少数邻居技巧（Few Neighbors Technique）：这个技巧基于桥梁数量的限制规则，如果一个岛屿仅能与有限的几个岛屿建立桥梁，那么会使用此技巧来确定桥梁的分配。
 
@@ -287,7 +305,7 @@ def apply_hashi_techniques(nrow, ncol, map):
 
 def dfs_solve(nrow, ncol, map):
     # 如果所有岛屿都正确连接，则返回成功
-    if all_islands_connected(nrow, ncol, map):
+    if Island.all_full():
         return True
 
     return False
@@ -296,11 +314,11 @@ def solve_puzzle(nrow, ncol, map):
     # 先尝试使用Hashi解题技巧
     apply_hashi_techniques(nrow, ncol, map)
 
-    # 检查是否所有岛屿都已经连接
-    if not all_islands_connected(nrow, ncol, map):
-        # 使用DFS尝试解决未解决的部分
-        if not dfs_solve(nrow, ncol, map):
-            return False  # 如果DFS失败，则谜题无解
+    # # 检查是否所有岛屿都已经连接
+    # if not Island.all_full():
+    #     # 使用DFS尝试解决未解决的部分
+    #     if not dfs_solve(nrow, ncol, map):
+    #         return False  # 如果DFS失败，则谜题无解
     return True
 
 def main():
@@ -308,8 +326,12 @@ def main():
     visual_map = map
     print("Scanned Puzzle Map:")
     print_map(nrow, ncol, map)
-    get_list_of_islands(nrow, ncol, map)
     # Placeholder for solving the puzzle
+
+    # add neighbors to the islands
+    for island in islands:
+        Island.get_island_neighbors(island, nrow, ncol, map)
+    print(Island.get_list_of_islands())
     solve_puzzle(nrow, ncol, visual_map)
     print("Solved Puzzle Map:")
     print_map_with_bridges(nrow, ncol, map)
