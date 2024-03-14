@@ -128,17 +128,17 @@ class Island:
 
     # add a neighbor to the island, neighbor is a island
     def add_connection(self, neighbor, weight):
-        self.connect_list.append(neighbor)
+        self.connect_list.append(neighbor.id)
         self.weight_left -= weight
-        neighbor.connect_list.append(self)
+        neighbor.connect_list.append(self.id)
         neighbor.weight_left -= weight
         # print("add_connection", self, neighbor)
 
     # remove a neighbor from the island, neighbor is a island
     def remove_connection(self, neighbor, weight):
-        self.connect_list.remove(neighbor)
+        self.connect_list.remove(neighbor.id)
         self.weight_left += weight
-        neighbor.connect_list.remove(self)
+        neighbor.connect_list.remove(self.id)
         neighbor.weight_left += weight
 
     def get_island_neighbors(self, nrow, ncol, map):
@@ -366,12 +366,12 @@ def solve_puzzle(nrow, ncol, map):
     island_path.append([starting_island, next_island_list, 3])
     path_index = 0
     bridges_index = len(bridges) - 1
-    if dfs(starting_island, next_island_list, bridges_index, path_index):
+    if dfs(starting_island, next_island_list, bridges_index, path_index, map):
         return True
     else:
         return False
 
-def dfs(starting_island, next_island_list, bridges_index, path_index):
+def dfs(starting_island, next_island_list, bridges_index, path_index, map):
         # if all islands are full, then return True
         if Island.all_full():
             return True
@@ -381,15 +381,14 @@ def dfs(starting_island, next_island_list, bridges_index, path_index):
             return False
 
         # if the next_island_list is empty, we need to go back to the last starting_island
-        if next_island_list is None:
+        if not next_island_list or next_island_list is None:
             # remove the last bridge
             bridges_index -= 1
             bridges.pop()
             path_index -= 1
             starting_island = island_path[path_index][0]
-            island_path[path_index][1] = next_island_list.pop(0)
             island_path.pop()
-            return dfs(starting_island, island_path[path_index][1], bridges_index, path_index)
+            return dfs(starting_island, island_path[path_index][1], bridges_index, path_index, map)
 
         # if we try all connections of the current island, then we need to try next island in the next_island_list
         if island_path[path_index][2] == 0:
@@ -399,7 +398,7 @@ def dfs(starting_island, next_island_list, bridges_index, path_index):
             # remove the last bridge
             bridges_index -= 1
             bridges.pop()
-            return dfs(starting_island, island_path[path_index][2], bridges_index, path_index)
+            return dfs(starting_island, island_path[path_index][1], bridges_index, path_index, map)
 
         if next_island_list is not None:
             next_island = next_island_list[0]
@@ -425,7 +424,8 @@ def dfs(starting_island, next_island_list, bridges_index, path_index):
             island_path.append([next_island, next_next_island_list, 3])
             bridges_index += 1
             path_index += 1
-            return dfs(next_island, next_next_island_list, bridges_index, path_index)
+            print_map_with_bridges(3, 3, map)
+            return dfs(next_island, next_next_island_list, bridges_index, path_index, map)
 
 
 def main():
