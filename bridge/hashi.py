@@ -114,7 +114,13 @@ class Island:
 
     # get the neighbors of the island
     def get_neighbors(self):
-        return self.neighbors
+        id = self.neighbors
+        return [Island.get_island_by_id(i) for i in id]
+
+    # get number of unconnected neighbors
+    def get_unconnected_neighbors(self):
+        id = list(set(self.neighbors) - set(self.connect_list))
+        return [Island.get_island_by_id(i) for i in id]
 
     # get number of neighbors
     def get_number_of_neighbors(self):
@@ -307,11 +313,9 @@ def apply_just_enough_neighbor_technique(nrow, ncol, map):
             symbol = str(map[r, c])
             if symbol in ISLAND_SYMBOLS:
                 island_temp = Island.get_island_by_loc(r, c)
-                neighbor_ids = Island.get_neighbors(island_temp)  # Assuming this returns a list of IDs or coordinates
-                # Convert neighbor IDs or coordinates to Island objects
-                neighbors = [Island.get_island_by_id(id) for id in neighbor_ids]
+                neighbors = Island.get_neighbors(island_temp)  # Assuming this returns a list of IDs or coordinates
 
-                if len(neighbor_ids) == 1:
+                if len(neighbors) == 1:
                     neighbor = neighbors[0]
                     if neighbor.weight_left < island_temp.weight_left:
                         return False
@@ -338,25 +342,16 @@ def apply_hashi_techniques(nrow, ncol, map):
         return False
     return True
 
-# Find the starting island which is the island has minimum weight
-def choose_stating_island(nrow, ncol, map):
-    min_weight = 12
-    for r in range(nrow):
-        for c in range(ncol):
-            symbol = str(map[r, c])
-            if symbol in ISLAND_SYMBOLS:
-                island_temp = Island.get_island_by_loc(r, c)
-                # neighbor_ids = Island.get_neighbors(island_temp)
-                island_weight = island_temp.weight_left
-                if min_weight > island_weight and island_weight > 0:
-                    min_weight = island_weight
-                    starting_island = island_temp
-    return starting_island
+# Find the starting island which is the island has minium neighbors which has minimum weight_left
+def find_next_island(islands_list):
+    # 收集符合条件的岛屿
+    valid_islands = [island for island in islands_list if island.get_number_of_neighbors() > 0 and island.weight_left > 0]
 
-# 以count最小的岛屿为起始岛
-# 从当前位置开始，尝试连接相邻的岛屿，优先选择未连接过的岛屿， 并且只建立一座桥（？选择未连接的岛同时需要选择更小的weight还是更大的weight）
-# 一直优先选择未连接的岛，直到当前岛屿的邻居中没有未连接过的岛屿，则回溯到上一个岛，重复上一步
-# 如果当前位置下没有未连接的岛屿，并且当前岛屿的连接数量已经达到了目标值，则结束
+    # 根据邻居数和 weight_left 排序
+    # 注意：这里先按照 weight_left 排序，然后按照邻居数排序，因为Python的排序是稳定的，这样可以确保邻居数优先级更高
+    sorted_islands = sorted(valid_islands, key=lambda island: (island.get_number_of_neighbors(), island.weight_left))
+
+    return sorted_islands
 
 def solve_puzzle(nrow, ncol, map):
     # 先尝试使用Hashi解题技巧
@@ -364,40 +359,74 @@ def solve_puzzle(nrow, ncol, map):
     for island in islands:
         Island.get_island_neighbors(island, nrow, ncol, map)
     apply_hashi_techniques(nrow, ncol, map)
-    starting_island = choose_stating_island(nrow, ncol, map)
-    island_path.append(starting_island)
+    starting_island = find_next_island(islands)
+    starting_island = starting_island[0]
+    not_connected_island = Island.get_unconnected_neighbors(starting_island)
+    next_island_list = find_next_island(not_connected_island)
+    island_path.append([starting_island, next_island_list, 3])
+    path_index = 0
     bridges_index = len(bridges) - 1
-    if dfs(starting_island, bridges_index):
+    if dfs(starting_island, next_island_list, bridges_index, path_index):
         return True
     else:
         return False
 
-def dfs(starting_island, bridges_index):
+def dfs(starting_island, next_island_list, bridges_index, path_index):
+        # if all islands are full, then return True
         if Island.all_full():
             return True
-        neighbors = starting_island.neighbors
-        not_connected_island = list(set(neighbors) - set(starting_island.connect_list))
-        # for neighbor in neighbors:
-        # 当前岛屿的邻居中有未连接的岛屿
-        if len(not_connected_island) > 0:
-            for neighbor in not_connected_island:
-                neighbor = Island.get_island_by_id(neighbor)
-                if (starting_island.weight_left >= 3 and neighbor.weight_left >= 3):
-                    add_bridge(starting_island, neighbor, 3)
-                elif (starting_island.weight_left >= 2 and neighbor.weight_left >= 2):
-                    add_bridge(starting_island, neighbor, 2)
-                elif (starting_island.weight_left >= 1 and neighbor.weight_left >= 1):
-                    add_bridge(starting_island, neighbor, 1)
-                island_path.append(neighbor)
-                starting_island = neighbor
-                break
-        # 当前岛屿的邻居没有未连接的岛屿，回溯到上一个，并且删掉bridge
-        else:
-            # remove the bridge after the index
-            for i in range(bridges_index, len(bridges)):
-                b = bridges[i]
-                remove_bridge(b.start, b.end, b.weight)
-            starting_island = island_path.pop()
+
+        # if the next_island_list is empty, then return False
+        if starting_island is island_path[0] and next_island_list is None:
+            return False
+
+        # if the next_island_list is empty, we need to go back to the last starting_island
+        if next_island_list is None:
+            # remove the last bridge
+            bridges_index -= 1
+            bridges.pop()
+            path_index -= 1
+            starting_island = island_path[path_index][0]
+            island_path[path_index][1] = next_island_list.pop(0)
+            island_path.pop()
+            return dfs(starting_island, island_path[path_index][1], bridges_index, path_index)
+
+        # if we try all connections of the current island, then we need to try next island in the next_island_list
+        if island_path[path_index][2] == 0:
+            # means we need to choose another next island in next_island_list
+            island_path[path_index][2] = 3
+            island_path[path_index][1] = next_island_list.pop(0)
+            # remove the last bridge
+            bridges_index -= 1
+            bridges.pop()
+            return dfs(starting_island, island_path[path_index][2], bridges_index, path_index)
+
+        if next_island_list is not None:
+            next_island = next_island_list[0]
+            min_weight = min(starting_island.weight_left, next_island.weight_left)
+            max_weight = island_path[path_index][2]
+            bridge_weight = 3
+            # we set the initialize max_weight for 3, so if is not 3, means we need to change the weight, and remove the last bridge
+            if max_weight < 3:
+                bridges_index -= 1
+                bridges.pop()
+            if (min_weight >= 3 and max_weight == 3):
+                add_bridge(starting_island, next_island, 3)
+            elif (min_weight >= 2 and max_weight >= 2):
+                add_bridge(starting_island, next_island, 2)
+                bridge_weight = 2
+            elif (min_weight >= 1, max_weight >= 1):
+                add_bridge(starting_island, next_island, 1)
+                bridge_weight = 1
+            # means next time we come back here, we need to change the weight - 1
+            island_path[path_index][2] = bridge_weight - 1
+            not_connected_island = Island.get_unconnected_neighbors(next_island)
+            next_next_island_list = find_next_island(not_connected_island)
+            island_path.append([next_island, next_next_island_list, 3])
+            bridges_index += 1
+            path_index += 1
+            return dfs(next_island, next_next_island_list, bridges_index, path_index)
+
 
 def main():
     nrow, ncol, map = scan_map()
@@ -410,4 +439,3 @@ def main():
     print_map_with_bridges(nrow, ncol, map)
 if __name__ == '__main__':
     main()
-
