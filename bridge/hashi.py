@@ -278,6 +278,26 @@ def check_cross(bridge):
                 return True
     return False
 
+# check does two islands are already conneted
+# return True mean already be connected
+def is_island_connected(island, neighbor):
+    if island is None or neighbor is None:
+        return False
+    r1, c1 = island.loc
+    r2, c2 = neighbor.loc
+    for bridge in bridges:
+        if r1 == r2:
+            if c1 > c2:
+                c1, c2 = c2, c1
+            if (bridge.start == (r1,c1+1) and bridge.end == (r2, c2-1)):
+                return True
+        else:
+            if r1 > r2:
+                r1, r2 = r2, r1
+            if (bridge.start == (r1+1,c1) and bridge.end == (r2-1, c2)):
+                return True
+    return False
+
 # 刚好足够的邻居技巧（Just Enough Neighbor Technique）：当一个岛屿周围的邻居数量与岛屿上的数字相匹配时，这个技巧会用来确定所有的桥梁。这意味着如果一个岛屿标记为“4”，并且它有四个邻居，则应该与每个邻居建立一座桥。
 # 单一未解决的邻居技巧（One Unsolved Neighbor Technique）：如果一个岛屿只有一个尚未连接的邻居，并且该岛屿还需要一座桥来完成其桥梁数量，那么这座桥必须建在这两个岛屿之间。
 def apply_just_enough_neighbor_technique(nrow, ncol, map):
@@ -310,9 +330,41 @@ def dfs_solve(nrow, ncol, map):
 
     return False
 
+# Find the starting island which is the island has minimum weight
+def choose_stating_island(nrow, ncol, map):
+    starting_island = None
+    min_weight = 12
+    for i in range(nrow):
+        for j in range(ncol):
+            island_temp = Island.get_island_by_loc(i, j)
+            # neighbor_ids = Island.get_neighbors(island_temp) 
+            island_weight = island_temp.weight_left
+            if min_weight > island_weight and island_weight > 0: 
+                min_weight = island_weight
+                starting_island = island_temp
+    return starting_island
+
+# 以count最小的岛屿为起始岛
+# 从当前位置开始，尝试连接相邻的岛屿，优先选择未连接过的岛屿， 并且只建立一座桥（？选择未连接的岛同时需要选择更小的weight还是更大的weight）
+# 一直优先选择未连接的岛，直到当前岛屿的邻居中没有未连接过的岛屿，则回溯到上一个岛，重复上一步
+# 如果当前位置下没有未连接的岛屿，并且当前岛屿的连接数量已经达到了目标值，则结束
+
 def solve_puzzle(nrow, ncol, map):
     # 先尝试使用Hashi解题技巧
     apply_hashi_techniques(nrow, ncol, map)
+
+    starting_island = choose_stating_island(nrow, ncol, map)
+    # for 
+    neighbors = starting_island.neighbor
+    for neighbor in neighbors:
+        if is_island_connected(starting_island, neighbor) == False:
+            if (starting_island.weight_left >= 3 and neighbor.weight_left >= 3):
+                add_bridge(starting_island, neighbor, 3)
+            elif (starting_island.weight_left >= 2 and neighbor.weight_left >= 2):
+                add_bridge(starting_island, neighbor, 2)
+            elif (starting_island.weight_left >= 1 and neighbor.weight_left >= 1):
+                add_bridge(starting_island, neighbor, 2)
+            check_cross()
 
     # # 检查是否所有岛屿都已经连接
     # if not Island.all_full():
