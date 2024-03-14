@@ -385,6 +385,7 @@ def solve_puzzle(nrow, ncol, map):
         return False
 
 def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
+        print("===============")
         print_map_with_bridges(nrow, ncol, map)
         print("starting_island", starting_islandID)
         print("next_island_list", next_islandID_list)
@@ -401,7 +402,7 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
             return False
 
         # if the next_island_list is empty, we need to go back to the last starting_island
-        if not next_islandID_list or next_islandID_list is None:
+        if len(next_islandID_list) == 0 or next_islandID_list is None:
             island_path.pop()
             starting_islandID = island_path[-1][0]
             return dfs(starting_islandID, island_path[-1][1], nrow, ncol, map)
@@ -409,29 +410,30 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
         # if we try all connections of the current island, then we need to try next island in the next_island_list
         if island_path[-1][2] == 0:
             # means we need to choose another next island in next_island_list
-            island_path[-1][2] = 3
             if len(next_islandID_list) == 1:
                 island_path.pop()
+                remove_bridge(bridges[-1])
                 starting_islandID = island_path[-1][0]
                 return dfs(starting_islandID, island_path[-1][1], nrow, ncol, map)
             else:
                 island_path[-1][1] = next_islandID_list.pop(0)
                 # remove the last bridge
                 remove_bridge(bridges[-1])
+                island_path[-1][2] = 3
                 return dfs(starting_islandID, island_path[-1][1], nrow, ncol, map)
 
         if next_islandID_list is not None or next_islandID_list:
             next_islandID = next_islandID_list[0]
-            starting_island = Island.get_island_by_id(starting_islandID)
-            next_island = Island.get_island_by_id(next_islandID)
-            print("starting_island", starting_island)
-            print("next_island", next_island)
-            min_weight = min(starting_island.weight_left, next_island.weight_left)
             max_weight = island_path[-1][2]
             bridge_weight = 3
             # we set the initialize max_weight for 3, so if is not 3, means we need to change the weight, and remove the last bridge
             if max_weight < 3:
                 remove_bridge(bridges[-1])
+            starting_island = Island.get_island_by_id(starting_islandID)
+            next_island = Island.get_island_by_id(next_islandID)
+            print("starting_island", starting_island)
+            print("next_island", next_island)
+            min_weight = min(starting_island.weight_left, next_island.weight_left)
             if (min_weight >= 3 and max_weight == 3):
                 bridge_weight = 3
             elif (min_weight >= 2 and max_weight >= 2):
