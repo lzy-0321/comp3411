@@ -382,7 +382,10 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol
         print_map_with_bridges(nrow, ncol, map)
         print("starting_island", starting_island)
         print("next_island_list", next_island_list)
+        for path in island_path:
+            print("island_path", path, '\n')
         # if all islands are full, then return True
+        print(path_index)
         if Island.all_full():
             return True
 
@@ -393,9 +396,8 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol
         # if the next_island_list is empty, we need to go back to the last starting_island
         if not next_island_list or next_island_list is None:
             # remove the last bridge
-            bridges_index -= 1
             remove_bridge(bridges[bridges_index])
-            
+            bridges_index -= 1
             path_index -= 1
             starting_island = island_path[path_index][0]
             island_path.pop()
@@ -407,8 +409,8 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol
             island_path[path_index][2] = 3
             island_path[path_index][1] = next_island_list.pop(0)
             # remove the last bridge
-            bridges_index -= 1
             remove_bridge(bridges[bridges_index])
+            bridges_index -= 1
             return dfs(starting_island, island_path[path_index][1], bridges_index, path_index, nrow, ncol, map)
 
         if next_island_list is not None or next_island_list:
@@ -418,8 +420,8 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol
             bridge_weight = 3
             # we set the initialize max_weight for 3, so if is not 3, means we need to change the weight, and remove the last bridge
             if max_weight < 3:
-                bridges_index -= 1
                 remove_bridge(bridges[bridges_index])
+                bridges_index -= 1
             if (min_weight >= 3 and max_weight == 3):
                 bridge_weight = 3
             elif (min_weight >= 2 and max_weight >= 2):
@@ -440,6 +442,7 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol
             # else:
             #     island_path[path_index][2] == 0
             # return dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol, map)
+
 def main():
     nrow, ncol, map = scan_map()
     visual_map = map
