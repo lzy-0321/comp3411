@@ -389,8 +389,8 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
         print_map_with_bridges(nrow, ncol, map)
         print("starting_island", starting_islandID)
         print("next_island_list", next_islandID_list)
-        for path in island_path:
-            print("island_path :", path, '\n')
+        # for path in island_path:
+        #     print("island_path :", path, '\n')
         for bridge in bridges:
             print("bridges :", bridge, '\n')
         # if all islands are full, then return True
