@@ -373,19 +373,18 @@ def solve_puzzle(nrow, ncol, map):
     island_path.append([starting_island, next_island_list, 3])
     path_index = 0
     bridges_index = len(bridges) - 1
-    if dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol, map):
+    if dfs(starting_island, next_island_list, nrow, ncol, map):
         return True
     else:
         return False
 
-def dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol, map):
+def dfs(starting_island, next_island_list, nrow, ncol, map):
         print_map_with_bridges(nrow, ncol, map)
         print("starting_island", starting_island)
         print("next_island_list", next_island_list)
         for path in island_path:
             print("island_path", path, '\n')
         # if all islands are full, then return True
-        print(path_index)
         if Island.all_full():
             return True
 
@@ -395,33 +394,27 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol
 
         # if the next_island_list is empty, we need to go back to the last starting_island
         if not next_island_list or next_island_list is None:
-            # remove the last bridge
-            remove_bridge(bridges[bridges_index])
-            bridges_index -= 1
-            path_index -= 1
-            starting_island = island_path[path_index][0]
+            starting_island = island_path[-1][0]
             island_path.pop()
-            return dfs(starting_island, island_path[path_index][1], bridges_index, path_index, nrow, ncol, map)
+            return dfs(starting_island, island_path[-1][1], nrow, ncol, map)
 
         # if we try all connections of the current island, then we need to try next island in the next_island_list
-        if island_path[path_index][2] == 0:
+        if island_path[-1][2] == 0:
             # means we need to choose another next island in next_island_list
-            island_path[path_index][2] = 3
-            island_path[path_index][1] = next_island_list.pop(0)
+            island_path[-1][2] = 3
+            island_path[-1][1] = next_island_list.pop(0)
             # remove the last bridge
-            remove_bridge(bridges[bridges_index])
-            bridges_index -= 1
-            return dfs(starting_island, island_path[path_index][1], bridges_index, path_index, nrow, ncol, map)
+            remove_bridge(bridges[-1])
+            return dfs(starting_island, island_path[-1][1], nrow, ncol, map)
 
         if next_island_list is not None or next_island_list:
             next_island = next_island_list[0]
             min_weight = min(starting_island.weight_left, next_island.weight_left)
-            max_weight = island_path[path_index][2]
+            max_weight = island_path[-1][2]
             bridge_weight = 3
             # we set the initialize max_weight for 3, so if is not 3, means we need to change the weight, and remove the last bridge
             if max_weight < 3:
-                remove_bridge(bridges[bridges_index])
-                bridges_index -= 1
+                remove_bridge(bridges[-1])
             if (min_weight >= 3 and max_weight == 3):
                 bridge_weight = 3
             elif (min_weight >= 2 and max_weight >= 2):
@@ -432,13 +425,11 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol
             # add the bridge
             add_bridge(starting_island, next_island, bridge_weight)
             # means next time we come back here, we need to change the weight - 1
-            island_path[path_index][2] = bridge_weight - 1
+            island_path[-1][2] = bridge_weight - 1
             not_connected_island = Island.get_unconnected_neighbors(next_island)
             next_next_island_list = find_next_island(not_connected_island)
             island_path.append([next_island, next_next_island_list, 3])
-            bridges_index += 1
-            path_index += 1
-            return dfs(next_island, next_next_island_list, bridges_index, path_index, nrow, ncol, map)
+            return dfs(next_island, next_next_island_list, nrow, ncol, map)
             # else:
             #     island_path[path_index][2] == 0
             # return dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol, map)
