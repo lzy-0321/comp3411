@@ -416,7 +416,7 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
                 starting_islandID = island_path[-1][0]
                 return dfs(starting_islandID, island_path[-1][1], nrow, ncol, map)
             else:
-                island_path[-1][1] = next_islandID_list.pop(-1)
+                island_path[-1][1] = island_path[-1][1][1:]
                 # remove the last bridge
                 remove_bridge(bridges[-1])
                 island_path[-1][2] = 3
