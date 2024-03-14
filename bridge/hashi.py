@@ -295,7 +295,6 @@ def dfs_solve(nrow, ncol, map):
 def solve_puzzle(nrow, ncol, map):
     # 先尝试使用Hashi解题技巧
     apply_hashi_techniques(nrow, ncol, map)
-
     # 检查是否所有岛屿都已经连接
     if not all_islands_connected(nrow, ncol, map):
         # 使用DFS尝试解决未解决的部分
