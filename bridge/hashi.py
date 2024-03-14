@@ -291,9 +291,15 @@ def apply_just_enough_neighbor_technique(nrow, ncol, map):
                 # Convert neighbor IDs or coordinates to Island objects
                 neighbors = [Island.get_island_by_id(id) for id in neighbor_ids]
 
-                if len(neighbors) == island_temp.weight_left or sum([neighbor.weight_left for neighbor in neighbors]) == island_temp.weight_left:
+                if len(neighbor_ids) == island_temp.weight_left or sum([neighbor.weight_left for neighbor in neighbors]) == island_temp.weight_left:
                     for neighbor in neighbors:
+                        print("add bridge: ", island_temp, neighbor)
                         add_bridge(island_temp, neighbor, neighbor.weight_left)
+
+                if len(neighbor_ids) == 1:
+                    neighbor = neighbors[0]
+                    print("add bridge: ", island_temp, neighbor)
+                    add_bridge(island_temp, neighbor, island_temp.weight_left)
 
 # 少数邻居技巧（Few Neighbors Technique）：这个技巧基于桥梁数量的限制规则，如果一个岛屿仅能与有限的几个岛屿建立桥梁，那么会使用此技巧来确定桥梁的分配。
 
