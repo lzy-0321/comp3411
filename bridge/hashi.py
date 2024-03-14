@@ -13,7 +13,9 @@ island_path = []
 # A bridge is a tuple (start, end, count, direction)
 # assume all brigde is from left to right or from top to bottom
 class Bridge:
-    def __init__(self, start, end, weight, direction):
+    def __init__(self, id1, id2, start, end, weight, direction):
+        self.island1_id = id1
+        self.island2_id = id2
         self.start = start  # Tuple (row, col), the starting point of the bridge
         self.end = end      # Tuple (row, col), the ending point of the bridge
         self.weight = weight  # The number of bridges connecting the islands
@@ -26,15 +28,15 @@ class Bridge:
         return bridges
 
     # add a bridge to the bridges list
-    def add_bridge(r1, c1, r2, c2, weight):
+    def add_bridge(id1, id2, r1, c1, r2, c2, weight):
         if r1 == r2:
             if c1 > c2:
                 c1, c2 = c2, c1
-            bridges.append(Bridge((r1, c1+1), (r2, c2-1), weight, 'horizontal'))
+            bridges.append(Bridge(id1, id2, (r1, c1+1), (r2, c2-1), weight, 'horizontal'))
         else:
             if r1 > r2:
                 r1, r2 = r2, r1
-            bridges.append(Bridge((r1+1, c1), (r2-1, c2), weight, 'vertical'))
+            bridges.append(Bridge(id1, id2, (r1+1, c1), (r2-1, c2), weight, 'vertical'))
 
     # remove the bridge
     def remove_bridge(r1, c1, r2, c2, weight):
@@ -266,17 +268,19 @@ def add_bridge(island, neighbor, weight):
     # avoid the bridge cross another bridge
     if check_cross(r1, c1, r2, c2):
         return False
-    Bridge.add_bridge(r1, c1, r2, c2, weight)
+    Bridge.add_bridge(island.id, neighbor.id, r1, c1, r2, c2, weight)
     Island.add_connection(island, neighbor, weight)
     return True
 
-def remove_bridge(island, neighbor, weight):
-    if island is None or neighbor is None:
+def remove_bridge(brigde):
+    island1 = Island.get_island_by_id(brigde.island1_id)
+    island2 = Island.get_island_by_id(brigde.island2_id)
+    if island1 is None or island2 is None:
         return False
-    r1, c1 = island.loc
-    r2, c2 = neighbor.loc
-    Bridge.remove_bridge(r1, c1, r2, c2, weight)
-    Island.remove_connection(island, neighbor, weight)
+    r1, c1 = island1.loc
+    r2, c2 = island2.loc
+    Bridge.remove_bridge(r1, c1, r2, c2, brigde.weight)
+    Island.remove_connection(island1, island2, brigde.weight)
     return True
 
 # check is a bridge crosses another bridge (A parallel bridge cannot pass through the same point as a vertical bridge)
@@ -359,19 +363,25 @@ def solve_puzzle(nrow, ncol, map):
     for island in islands:
         Island.get_island_neighbors(island, nrow, ncol, map)
     apply_hashi_techniques(nrow, ncol, map)
+    print_map_with_bridges(nrow, ncol, map)
     starting_island = find_next_island(islands)
     starting_island = starting_island[0]
+    print("starting_island", starting_island)
     not_connected_island = Island.get_unconnected_neighbors(starting_island)
     next_island_list = find_next_island(not_connected_island)
+    print("next_island_list", next_island_list)
     island_path.append([starting_island, next_island_list, 3])
     path_index = 0
     bridges_index = len(bridges) - 1
-    if dfs(starting_island, next_island_list, bridges_index, path_index, map):
+    if dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol, map):
         return True
     else:
         return False
 
-def dfs(starting_island, next_island_list, bridges_index, path_index, map):
+def dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol, map):
+        print_map_with_bridges(nrow, ncol, map)
+        print("starting_island", starting_island)
+        print("next_island_list", next_island_list)
         # if all islands are full, then return True
         if Island.all_full():
             return True
@@ -384,11 +394,12 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, map):
         if not next_island_list or next_island_list is None:
             # remove the last bridge
             bridges_index -= 1
-            bridges.pop()
+            remove_bridge(bridges[bridges_index])
+            
             path_index -= 1
             starting_island = island_path[path_index][0]
             island_path.pop()
-            return dfs(starting_island, island_path[path_index][1], bridges_index, path_index, map)
+            return dfs(starting_island, island_path[path_index][1], bridges_index, path_index, nrow, ncol, map)
 
         # if we try all connections of the current island, then we need to try next island in the next_island_list
         if island_path[path_index][2] == 0:
@@ -397,10 +408,10 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, map):
             island_path[path_index][1] = next_island_list.pop(0)
             # remove the last bridge
             bridges_index -= 1
-            bridges.pop()
-            return dfs(starting_island, island_path[path_index][1], bridges_index, path_index, map)
+            remove_bridge(bridges[bridges_index])
+            return dfs(starting_island, island_path[path_index][1], bridges_index, path_index, nrow, ncol, map)
 
-        if next_island_list is not None:
+        if next_island_list is not None or next_island_list:
             next_island = next_island_list[0]
             min_weight = min(starting_island.weight_left, next_island.weight_left)
             max_weight = island_path[path_index][2]
@@ -408,15 +419,16 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, map):
             # we set the initialize max_weight for 3, so if is not 3, means we need to change the weight, and remove the last bridge
             if max_weight < 3:
                 bridges_index -= 1
-                bridges.pop()
+                remove_bridge(bridges[bridges_index])
             if (min_weight >= 3 and max_weight == 3):
-                add_bridge(starting_island, next_island, 3)
+                bridge_weight = 3
             elif (min_weight >= 2 and max_weight >= 2):
-                add_bridge(starting_island, next_island, 2)
                 bridge_weight = 2
             elif (min_weight >= 1, max_weight >= 1):
-                add_bridge(starting_island, next_island, 1)
                 bridge_weight = 1
+
+            # add the bridge
+            add_bridge(starting_island, next_island, bridge_weight)
             # means next time we come back here, we need to change the weight - 1
             island_path[path_index][2] = bridge_weight - 1
             not_connected_island = Island.get_unconnected_neighbors(next_island)
@@ -424,10 +436,10 @@ def dfs(starting_island, next_island_list, bridges_index, path_index, map):
             island_path.append([next_island, next_next_island_list, 3])
             bridges_index += 1
             path_index += 1
-            print_map_with_bridges(3, 3, map)
-            return dfs(next_island, next_next_island_list, bridges_index, path_index, map)
-
-
+            return dfs(next_island, next_next_island_list, bridges_index, path_index, nrow, ncol, map)
+            # else:
+            #     island_path[path_index][2] == 0
+            # return dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol, map)
 def main():
     nrow, ncol, map = scan_map()
     visual_map = map
