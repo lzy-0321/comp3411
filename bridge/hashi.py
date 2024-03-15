@@ -22,7 +22,7 @@ class Bridge:
         self.direction = direction  # 'horizontal' or 'vertical'
 
     def __repr__(self):
-        return f"Bridge(start={self.start}, end={self.end}, weight={self.weight}, direction={self.direction})"
+        return f"Bridge(island1_id={self.island1_id}, island2_id={self.island2_id}, start={self.start}, end={self.end}, weight={self.weight}, direction={self.direction})"
 
     def get_bridges():
         return bridges
@@ -416,7 +416,7 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
                 starting_islandID = island_path[-1][0]
                 return dfs(starting_islandID, island_path[-1][1], nrow, ncol, map)
             else:
-                island_path[-1][1] = next_islandID_list.pop(0)
+                island_path[-1][1] = island_path[-1][1][1:]
                 # remove the last bridge
                 remove_bridge(bridges[-1])
                 island_path[-1][2] = 3
@@ -442,16 +442,25 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
                 bridge_weight = 1
 
             # add the bridge
-            add_bridge(starting_island, next_island, bridge_weight)
+            if add_bridge(starting_island, next_island, bridge_weight):
             # means next time we come back here, we need to change the weight - 1
-            island_path[-1][2] = bridge_weight - 1
-            not_connected_island = Island.get_unconnected_neighbors(next_islandID)
-            next_next_islandID_list = find_next_island(not_connected_island)
-            island_path.append([next_islandID, next_next_islandID_list, 3])
-            return dfs(next_islandID, next_next_islandID_list, nrow, ncol, map)
-            # else:
-            #     island_path[path_index][2] == 0
-            # return dfs(starting_island, next_island_list, bridges_index, path_index, nrow, ncol, map)
+                island_path[-1][2] = bridge_weight - 1
+                not_connected_island = Island.get_unconnected_neighbors(next_islandID)
+                next_next_islandID_list = find_next_island(not_connected_island)
+                island_path.append([next_islandID, next_next_islandID_list, 3])
+                return dfs(next_islandID, next_next_islandID_list, nrow, ncol, map)
+            else:
+                print("add bridge failed")
+                if len(next_islandID_list) == 1:
+                    island_path.pop()
+                    starting_islandID = island_path[-1][0]
+                    return dfs(starting_islandID, island_path[-1][1], nrow, ncol, map)
+                else:
+                    print("island_path[-1][2] == -1")
+                    island_path[-1][1] = island_path[-1][1][1:]
+                    island_path[-1][2] = 3
+                    print("island_path:", island_path)
+                    return dfs(starting_islandID, island_path[-1][1], nrow, ncol, map)
 
 def main():
     nrow, ncol, map = scan_map()
