@@ -134,6 +134,10 @@ class Island:
     def get_number_of_neighbors(self):
         return len(self.neighbors)
 
+    # get number of unconnected neighbors
+    def get_number_of_unconnected_neighbors(self):
+        return len(set(self.neighbors) - set(self.connect_list))
+
     # add a neighbor to the island, neighbor is a island
     def add_connection(self, neighbor, weight):
         self.connect_list.append(neighbor.id)
@@ -340,6 +344,16 @@ def apply_just_enough_neighbor_technique(nrow, ncol, map):
                 if sum([neighbor.weight_left for neighbor in neighbors]) == island_temp.weight_left:
                     for neighbor in neighbors:
                         add_bridge(island_temp, neighbor, neighbor.weight_left)
+
+                if island_temp.weight_left == 3 and len(neighbors) == 1 or \
+                    island_temp.weight_left == 6 and len(neighbors) == 2 or \
+                    island_temp.weight_left == 9 and len(neighbors) == 3 or \
+                    island_temp.weight_left == 12 and len(neighbors) == 4:
+                    weight = island_temp.weight_left // len(neighbors)
+                    for neighbor in neighbors:
+                        if neighbor.weight_left < 3:
+                            return False
+                        add_bridge(island_temp, neighbor, weight)
     return True
 
 # 少数邻居技巧（Few Neighbors Technique）：这个技巧基于桥梁数量的限制规则，如果一个岛屿仅能与有限的几个岛屿建立桥梁，那么会使用此技巧来确定桥梁的分配。
@@ -358,11 +372,11 @@ def find_next_island(islandsID_list):
     islands_list = [Island.get_island_by_id(id) for id in islandsID_list]
 
     # 收集符合条件的岛屿
-    valid_islands = [island for island in islands_list if island.get_number_of_neighbors() > 0 and island.weight_left > 0]
+    valid_islands = [island for island in islands_list if island.get_number_of_unconnected_neighbors() > 0 and island.weight_left > 0]
 
     # 根据邻居数和 weight_left 排序
     # 注意：这里先按照 weight_left 排序，然后按照邻居数排序，因为Python的排序是稳定的，这样可以确保邻居数优先级更高
-    sorted_islands = sorted(valid_islands, key=lambda island: (island.get_number_of_neighbors(), island.weight_left))
+    sorted_islands = sorted(valid_islands, key=lambda island: (island.get_number_of_unconnected_neighbors(), island.weight_left))
 
     # return the list of id
     return [island.id for island in sorted_islands]
@@ -523,5 +537,6 @@ def main():
     solve_puzzle(nrow, ncol, visual_map)
     # print("Solved Puzzle Map:")
     print_map_with_bridges(nrow, ncol, map)
+    print("\n")
 if __name__ == '__main__':
     main()
