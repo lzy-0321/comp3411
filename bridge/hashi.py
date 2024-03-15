@@ -293,19 +293,19 @@ def remove_bridge(brigde):
 # before try to add a bridge between (r1, c1) and (r2, c2), check if there is a bridge between (r1, c1) and (r2, c2)
 # if cross, return True, else return False
 def check_cross(r1, c1, r2, c2):
+    # 检查新的桥是否与已存在的桥相交
     for b in bridges:
-        if r1 == r2: # horizontal
-            # Check if the vertical bridge crosses the horizontal one
-            c1, c2 = min(c1, c2) + 1, max(c1, c2) - 1
-            if (b.start[1] >= c1 and b.start[1] <= c2) and \
-                (r1 >= b.start[0] and r1 <= b.end[0]):
-                return True
-        else:  # bridge is vertical and b is horizontal
-            r1, r2 = min(r1, r2) + 1, max(r1, r2) - 1
-            # Check if the horizontal bridge crosses the vertical one
-            if (b.start[0] >= r1 and b.start[0] <= r2) and \
-                (c1 >= b.start[1] and c1 <= b.end[1]):
-                return True
+        # 检查是否是水平桥梁
+        if r1 == r2:
+            # 水平桥梁，检查所有垂直桥
+            if b.direction == 'vertical' and min(c1, c2) < b.start[1] <= max(c1, c2):
+                if min(r1, r2) <= b.start[0] <= max(r1, r2):
+                    return True
+        else:
+            # 垂直桥梁，检查所有水平桥
+            if b.direction == 'horizontal' and min(r1, r2) < b.start[0] <= max(r1, r2):
+                if min(c1, c2) <= b.start[1] <= max(c1, c2):
+                    return True
     return False
 
 # check does two islands are already conneted
@@ -370,10 +370,8 @@ def find_next_island(islandsID_list):
 def get_starting_island():
     starting_islandIDs = find_next_island([island.id for island in islands])
     starting_islandID = starting_islandIDs[0]
-    # print("starting_island", starting_islandID)
     not_connected_island = Island.get_unconnected_neighbors(starting_islandID)
     next_islandID_list = find_next_island(not_connected_island)
-    # print("next_island_list", next_islandID_list)
     island_path.append([starting_islandID, next_islandID_list, 3])
     return starting_islandID, next_islandID_list
 
@@ -387,7 +385,6 @@ def solve_puzzle(nrow, ncol, map):
     if Island.all_full():
             return True
     starting_islandID, next_islandID_list = get_starting_island()
-    island_path.append([starting_islandID, next_islandID_list, 3])
     if dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
         return True
     else:
@@ -488,6 +485,8 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
 
         # add the bridge
         if add_bridge(starting_island, next_island, bridge_weight):
+            with open("info.txt", "a") as file:
+                file.write(f"add bridge: {starting_island} -> {next_island} weight: {bridge_weight}\n")
             # means next time we come back here, we need to change the weight - 1
             island_path[-1][2] = bridge_weight - 1
             if next_island.is_full():
@@ -498,9 +497,18 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
                         # we need to find anyother starting_island in all islands which is not full
                         starting_islandID, next_islandID_list = get_starting_island()
                         return dfs(starting_islandID, next_islandID_list, nrow, ncol, map)
+                    # 在island_path中最后一个之前添加这一次的记录
+                    with open("info.txt", "a") as file:
+                        file.write(f"next_island {next_islandID} is full, move to next island in next_island_list\n")
+                    # 复制一份island_path的最后一个记录
+                    island_path.append(list(island_path[-1]))
+                    # 更改倒数第二个记录的next_island_list
+                    island_path[-2][1] = island_path[-2][1][:1]
                     return dfs_move_to_next_in_next_island_list(starting_islandID, nrow, ncol, map)
             return dfs_move_to_next_island(next_islandID, nrow, ncol, map)
         else:
+            with open("info.txt", "a") as file:
+                file.write(f"can't add bridge: {starting_island} -> {next_island} weight: {bridge_weight}\n")
             if len(next_islandID_list) == 1:
                 return dfs_back_to_last_island(starting_islandID, nrow, ncol, map)
             else:
@@ -509,11 +517,11 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
 def main():
     nrow, ncol, map = scan_map()
     visual_map = map
-    print("Scanned Puzzle Map:")
-    print_map(nrow, ncol, map)
+    # print("Scanned Puzzle Map:")
+    # print_map(nrow, ncol, map)
     # Placeholder for solving the puzzle
     solve_puzzle(nrow, ncol, visual_map)
-    print("Solved Puzzle Map:")
+    # print("Solved Puzzle Map:")
     print_map_with_bridges(nrow, ncol, map)
 if __name__ == '__main__':
     main()
