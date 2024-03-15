@@ -367,6 +367,17 @@ def find_next_island(islandsID_list):
     # return the list of id
     return [island.id for island in sorted_islands]
 
+def get_starting_island():
+    starting_islandIDs = find_next_island([island.id for island in islands])
+    starting_islandID = starting_islandIDs[0]
+    # print("starting_island", starting_islandID)
+    not_connected_island = Island.get_unconnected_neighbors(starting_islandID)
+    next_islandID_list = find_next_island(not_connected_island)
+    # print("next_island_list", next_islandID_list)
+    island_path.append([starting_islandID, next_islandID_list, 3])
+    return starting_islandID, next_islandID_list
+
+
 def solve_puzzle(nrow, ncol, map):
     # 先尝试使用Hashi解题技巧
     # add neighbors to the islands
@@ -375,13 +386,7 @@ def solve_puzzle(nrow, ncol, map):
     apply_hashi_techniques(nrow, ncol, map)
     if Island.all_full():
             return True
-    # print_map_with_bridges(nrow, ncol, map)
-    starting_islandIDs = find_next_island([island.id for island in islands])
-    starting_islandID = starting_islandIDs[0]
-    # print("starting_island", starting_islandID)
-    not_connected_island = Island.get_unconnected_neighbors(starting_islandID)
-    next_islandID_list = find_next_island(not_connected_island)
-    # print("next_island_list", next_islandID_list)
+    starting_islandID, next_islandID_list = get_starting_island()
     island_path.append([starting_islandID, next_islandID_list, 3])
     if dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
         return True
@@ -489,6 +494,10 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
                 if len(next_islandID_list) == 1:
                     return dfs_back_to_last_island(next_islandID, nrow, ncol, map)
                 else:
+                    if starting_island.is_full():
+                        # we need to find anyother starting_island in all islands which is not full
+                        starting_islandID, next_islandID_list = get_starting_island()
+                        return dfs(starting_islandID, next_islandID_list, nrow, ncol, map)
                     return dfs_move_to_next_in_next_island_list(starting_islandID, nrow, ncol, map)
             return dfs_move_to_next_island(next_islandID, nrow, ncol, map)
         else:
