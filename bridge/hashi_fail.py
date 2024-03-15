@@ -1,43 +1,8 @@
 #!/usr/bin/env python3
-'''
-3411 ASS1 - z5340468 Ziyao Lu and z5365221 Charlotte Ma
-
-Question: Briefly describe how your program works, including any algorithms and data structures 
-employed, and explain any design decisions you made along the way.
-
-Our code utilizes backtracking and DFS to establish bridges in the map. Initially, when the number
-of neighbors of an island in the map is exactly equal to the number assigned to that island, we 
-can directly connect bridges between these islands. Additionally, if an island has only one 
-unconnected neighbor, and the remaining weight of this island is 1, then a bridge must be built 
-between these two islands.
-
-After checking the above two scenarios, our program will search for a starting island. The 
-conditions for selecting the starting island is to sort all islands by their assigned numbers and 
-prioritize selecting the island with the fewest neighbors. Build the maximum number of bridges
-possible without exceeding the current island's weight and the weight of neighboring islands. 
-After building bridges on the current island, the program selects the neighboring island with the 
-lowest assigned number to move to. 
-
-This selection process continues until there are no connectable islands among the neighbors of the
-current island, and the bridge count of the current island does not satisfy the assigned number of
-islands. In such cases, the program backtracks to the previous island for further selection.This 
-process ensures that the bridges are built efficiently while adhering to the constraints of the 
-island puzzle.
-
-However, there are still areas for improvement in our code. We have some other ideas, but due to 
-time constraints, we haven't been able to implement them yet. When selecting an island to build 
-bridges, we should calculate the existing number of bridges and potential bridges in a specific 
-direction for the specified island. Then, based on these calculations, dynamically add bridges 
-to the map. This involves updating the map's state by adding bridges in the given direction and 
-quantity. After each attempt to add bridges, we need to check if the bridge requirements for all 
-islands have been met.
-
-'''
-
-
 import numpy as np
 import sys
 
+# 增加递归深度限制
 sys.setrecursionlimit(10000000)
 # define a island symbol type can be 1-9 or a-c, signal symbol for the island
 ISLAND_SYMBOLS = "123456789abc"
@@ -332,20 +297,19 @@ def remove_bridge(brigde):
 # before try to add a bridge between (r1, c1) and (r2, c2), check if there is a bridge between (r1, c1) and (r2, c2)
 # if cross, return True, else return False
 def check_cross(r1, c1, r2, c2):
-    # check does new bridge cross any existed bridges
+    # 检查新的桥是否与已存在的桥相交
     for b in bridges:
-        if r1 == r2: # horizontal
-            # Check if the vertical bridge crosses the horizontal one
-            c1, c2 = min(c1, c2) + 1, max(c1, c2) - 1
-            if (b.start[1] >= c1 and b.start[1] <= c2) and \
-                (r1 >= b.start[0] and r1 <= b.end[0]):
-                return True
-        else:  # bridge is vertical and b is horizontal
-            r1, r2 = min(r1, r2) + 1, max(r1, r2) - 1
-            # Check if the horizontal bridge crosses the vertical one
-            if (b.start[0] >= r1 and b.start[0] <= r2) and \
-                (c1 >= b.start[1] and c1 <= b.end[1]):
-                return True
+        # 检查是否是水平桥梁
+        if r1 == r2:
+            # 水平桥梁，检查所有垂直桥
+            if b.direction == 'vertical' and min(c1, c2) < b.start[1] <= max(c1, c2):
+                if min(r1, r2) <= b.start[0] <= max(r1, r2):
+                    return True
+        else:
+            # 垂直桥梁，检查所有水平桥
+            if b.direction == 'horizontal' and min(r1, r2) < b.start[0] <= max(r1, r2):
+                if min(c1, c2) <= b.start[1] <= max(c1, c2):
+                    return True
     return False
 
 # check does two islands are already conneted
@@ -355,8 +319,8 @@ def is_island_connected(island, neighbors):
         return False
     return neighbors.id in island.connect_list
 
-# Just Enough Neighbor: if the number of neighbors around an island is match the weight_left, then directly add bridges
-# One Unsolved Neighbor Technique: if an island's weight_left is one and there is only one neighbour not connected yet then directly add bridge
+# 刚好足够的邻居技巧（Just Enough Neighbor Technique）：当一个岛屿周围的邻居数量与岛屿上的数字相匹配时，这个技巧会用来确定所有的桥梁。这意味着如果一个岛屿标记为“4”，并且它有四个邻居，则应该与每个邻居建立一座桥。
+# 单一未解决的邻居技巧（One Unsolved Neighbor Technique）：如果一个岛屿只有一个尚未连接的邻居，并且该岛屿还需要一座桥来完成其桥梁数量，那么这座桥必须建在这两个岛屿之间。
 def apply_just_enough_neighbor_technique(nrow, ncol, map):
     for r in range(nrow):
         for c in range(ncol):
@@ -392,6 +356,11 @@ def apply_just_enough_neighbor_technique(nrow, ncol, map):
                         add_bridge(island_temp, neighbor, weight)
     return True
 
+# 少数邻居技巧（Few Neighbors Technique）：这个技巧基于桥梁数量的限制规则，如果一个岛屿仅能与有限的几个岛屿建立桥梁，那么会使用此技巧来确定桥梁的分配。
+
+# 剩余技巧（Leftovers Technique）：当一个岛屿的剩余桥数等于其剩余未连接邻居数时使用。这意味着这些桥必须以某种方式分布于剩余的邻居之间。
+
+# 隔离技巧（Isolation Technique）：这是一个关键技巧，它利用了每个岛屿都必须相互连接的规则。如果不连接某些桥梁会导致某个岛屿或岛屿群隔离，那么这些连接就必须建立。
 def apply_hashi_techniques(nrow, ncol, map):
     if not apply_just_enough_neighbor_technique(nrow, ncol, map):
         return False
@@ -402,9 +371,11 @@ def find_next_island(islandsID_list):
     # get the list of islands
     islands_list = [Island.get_island_by_id(id) for id in islandsID_list]
 
+    # 收集符合条件的岛屿
     valid_islands = [island for island in islands_list if island.get_number_of_unconnected_neighbors() > 0 and island.weight_left > 0]
 
-    # order by the number of neighbors and weight_left
+    # 根据邻居数和 weight_left 排序
+    # 注意：这里先按照 weight_left 排序，然后按照邻居数排序，因为Python的排序是稳定的，这样可以确保邻居数优先级更高
     sorted_islands = sorted(valid_islands, key=lambda island: (island.get_number_of_unconnected_neighbors(), island.weight_left))
 
     # return the list of id
@@ -420,6 +391,7 @@ def get_starting_island():
 
 
 def solve_puzzle(nrow, ncol, map):
+    # 先尝试使用Hashi解题技巧
     # add neighbors to the islands
     for island in islands:
         Island.get_island_neighbors(island, nrow, ncol, map)
@@ -539,12 +511,12 @@ def dfs(starting_islandID, next_islandID_list, nrow, ncol, map):
                         # we need to find anyother starting_island in all islands which is not full
                         starting_islandID, next_islandID_list = get_starting_island()
                         return dfs(starting_islandID, next_islandID_list, nrow, ncol, map)
-                    # update island_path in last position
+                    # 在island_path中最后一个之前添加这一次的记录
                     with open("info.txt", "a") as file:
                         file.write(f"next_island {next_islandID} is full, move to next island in next_island_list\n")
-                    # copy the last island_path
+                    # 复制一份island_path的最后一个记录
                     island_path.append(list(island_path[-1]))
-                    # update the second last  in next_island_list
+                    # 更改倒数第二个记录的next_island_list
                     island_path[-2][1] = island_path[-2][1][:1]
                     return dfs_move_to_next_in_next_island_list(starting_islandID, nrow, ncol, map)
             return dfs_move_to_next_island(next_islandID, nrow, ncol, map)
