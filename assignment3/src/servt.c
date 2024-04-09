@@ -192,7 +192,7 @@ int server_step(
   if( i > 0 ) {
     move_scanned = fscanf(agent_out[player], "%d", &move[m]);
     gettimeofday( &tod_fin, NULL );
-    move_msec = 1 + (tod_fin.tv_sec -tod_start.tv_sec )*1000
+    move_msec = 1000 + (tod_fin.tv_sec -tod_start.tv_sec )*1000
                   + (tod_fin.tv_usec-tod_start.tv_usec)/1000;
     msec_left[player] -= move_msec;
     if( move_scanned ) {
