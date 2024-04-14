@@ -21,6 +21,17 @@ curr = 0 # this is the current board to play in
 first_move_b = 0 # the first move board
 first_move_c = 0 # the first move cell
 
+win_conditions = [
+    (1, 2, 3),  # Rows
+    (4, 5, 6),
+    (7, 8, 9),
+    (1, 4, 7),  # Columns
+    (2, 5, 8),
+    (3, 6, 9),
+    (1, 5, 9),  # Diagonals
+    (3, 5, 7)
+]
+
 # print a row
 def print_board_row(bd, a, b, c, i, j, k):
     print(" "+s[bd[a][i]]+" "+s[bd[a][j]]+" "+s[bd[a][k]]+" | " \
@@ -74,26 +85,12 @@ class GameNode:
         # The game is won by getting three-in-a row either horizontally, vertically or diagonally in one of the nine boards.
         # we check the small board one by one
         # Define win conditions (patterns) for a 3x3 board
-        win_conditions = [
-            (1, 2, 3),  # Rows
-            (4, 5, 6),
-            (7, 8, 9),
-            (1, 4, 7),  # Columns
-            (2, 5, 8),
-            (3, 6, 9),
-            (1, 5, 9),  # Diagonals
-            (3, 5, 7)
-        ]
-
+        
         # Check each small board one by one
         for i in range(1, 10):  # Assuming 9 small boards, indexed from 1 to 9
             for condition in win_conditions:
                 if all(self.board[i][pos] == self.player for pos in condition):
                     self.finished = True
-                    if self.player == 1:
-                        self.value = 1
-                    else:
-                        self.value = -1
                     return
         
 class GameTree:
@@ -109,7 +106,7 @@ class GameTree:
 
     def _generate_tree_recursive(self, current_node, current_depth, player):
         # Define the maximum depth as a constant, for example, 3 layers deep
-        MAX_DEPTH = 100
+        MAX_DEPTH = 10
         
         if current_depth > MAX_DEPTH:
             return  # Base case: if current depth exceeds MAX_DEPTH, stop recursion
@@ -125,24 +122,20 @@ class GameTree:
                 new_board = current_node.board.copy()
                 new_board[current_node.L][i] = player
                 new_node = GameNode(new_board, current_node.L, i, player, current_node)
+                new_node.add_value(self.cal_value(new_node))
                 current_node.children.append(new_node)
                 self._generate_tree_recursive(new_node, current_depth + 1, 3 - player)
     
-    # update the value of the node by interating the children
-    def update_value(self, node):
-        if node.children:
-            if node.player == 1:
-                node.value = max([self.update_value(x) for x in node.children])
-            else:
-                node.value = min([self.update_value(x) for x in node.children])
-        return node.value
-
-    # set node as the root of the tree
-    def cut_tree(self, node):
-        if node.parent:
-            node.parent.children = []
-            node.parent.children.append(node)
-            self.root = node
+    # value is the number of possible winning conditions that can be formed
+    def cal_value(self, node):
+        value = 0
+        for condition in win_conditions:
+            # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1
+            pieces = [node.board[pos] for pos in condition]
+            if any(piece == self.player for piece in pieces) and all(piece != 3 - self.player for piece in pieces):
+                value += 1
+            
+        return value
     
    # search the best move in the tree for us, and cut the tree
     def search_best_move(self):
