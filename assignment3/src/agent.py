@@ -54,10 +54,10 @@ def print_board(board):
 
 
 #########################################
-# use minmax tree to choice next step
+# the structure for the game tree
 
 class GameNode:
-    # the sturcture of the game tree node
+    # the structure of the game tree node
     # board: the current board
     # move: the move to get to this board
     # value: the value of this node
@@ -71,7 +71,7 @@ class GameNode:
         self.children = []
         self.value = 0
         self.finished = False
-    
+
     # value is the number of possible winning conditions that can be formed
     def cal_value(self):
         value = 0
@@ -80,26 +80,26 @@ class GameNode:
                 # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1]
                 if any(self.board[i][pos] == self.player for pos in condition) \
                     and all(self.board[i][pos] != 3 - self.player for pos in condition):
-                    value += 1       
+                    value += 1
         self.value = value
-    
+
     def is_finished(self):
         return self.finished
-    
+
     def check_finished(self):
         # check if the board is finished
         # check the board is win or not
         # The game is won by getting three-in-a row either horizontally, vertically or diagonally in one of the nine boards.
         # we check the small board one by one
         # Define win conditions (patterns) for a 3x3 board
-        
+
         # Check each small board one by one
         for i in range(1, 10):  # Assuming 9 small boards, indexed from 1 to 9
             for condition in win_conditions:
                 if all(self.board[i][pos] == self.player for pos in condition):
                     self.finished = True
                     return
-        
+
 class GameTree:
     # the structure of the game tree
     def __init__(self):
@@ -107,7 +107,6 @@ class GameTree:
 
     def generate_tree(self, board, first_move):
         self.root = GameNode(board, first_move[0], first_move[1], 2, None) # the root is the first move of the opponent
-        
         self._generate_tree_recursive(self.root, 1, 1)  # Start with depth 1, and player 1 (us)
 
     def _generate_tree_recursive(self, current_node, current_depth, player):
@@ -115,12 +114,11 @@ class GameTree:
 
         if current_depth > MAX_DEPTH:
             return
-        
         current_node.check_finished()
         if current_node.is_finished():
             # If the current board is finished, check next sub-board
             return
-        
+
         # we check in the current board's sub-board(parent's L)
         for i in range(1, 10):  # Assuming board indices go from 1 to 9
             if current_node.board[current_node.L][i] == 0:
@@ -131,7 +129,7 @@ class GameTree:
                     new_node.cal_value()
                 current_node.children.append(new_node)
                 self._generate_tree_recursive(new_node, current_depth + 1, 3 - player)
-    
+
     def update_value(self, node, depth):
         if not node.children or depth == 0:
             return node.value
@@ -140,20 +138,64 @@ class GameTree:
         else:
             node.value = max(self.update_value(child, depth - 1) for child in node.children)
         return node.value
-    
+
     def minmax_move(self):
         print(self.root)
         self.update_value(self.root, MAX_DEPTH)
         # return node.L which has the maximum value
         return max(self.root.children, key=lambda x: x.value).L
-    
+
     def print_tree(self):
         self._print_tree_recursive(self.root, 0)
-        
+
     def _print_tree_recursive(self, node, depth):
         print("  " * depth, node.L, node.player, node.value)
         for child in node.children:
             self._print_tree_recursive(child, depth + 1)
+
+class AlphaBetaTree:
+    def __init__(self, gameTree):
+        self.game_tree = gameTree
+
+    def minmax_alpha_beta(self, node):
+        clf = self.min_value(node, -np.inf, np.inf)
+        for child in node.children:
+            if child.value == clf:
+                return child.L
+
+    def max_value(self, node, alpha, beta):
+        if self.isTerminal(node):
+            return self.get_value(node)
+        clf = -np.inf
+        for child in node.children:
+            temp_value = self.min_value(child, alpha, beta)
+            clf = max(clf, temp_value)
+            if clf >= beta:
+                return clf
+            alpha = max(alpha, clf)
+        node.value = clf
+        return clf
+
+    def min_value(self, node, alpha, beta):
+        if self.isTerminal(node):
+            return self.get_value(node)
+        clf = np.inf
+        for child in node.children:
+            temp_value = self.max_value(child, alpha, beta)
+            clf = min(clf, temp_value)
+            if clf <= alpha:
+                return clf
+            beta = min(beta, clf)
+        node.value = clf
+        return clf
+
+    def get_value(self, node):
+        return node.value
+
+    def isTerminal(self, node):
+        if node.value == 0:
+            return False
+        return True
 
 # choose a move to play
 def play(first_move):
@@ -170,8 +212,9 @@ def play(first_move):
     tree = GameTree()
     # print(first_move)
     tree.generate_tree(boards, first_move)
-        
-    n = tree.minmax_move()
+    tree = AlphaBetaTree(tree)
+
+    n = tree.minmax_alpha_beta(tree.game_tree.root)
     # tree.print_tree()
     print("playing", n)
     place(curr, n, 1)
@@ -194,8 +237,7 @@ def parse(string):
         args = args.split(",")
     else:
         command, args = string, []
-        
-    
+
     # init tells us that a new game is about to begin.
     # start(x) or start(o) tell us whether we will be playing first (x)
     # or second (o); we might be able to ignore start if we internally
@@ -217,7 +259,7 @@ def parse(string):
     elif command == "third_move":
         print("third move", args)
         # place the first move (randomly generated for us)
-        place(int(args[0]), int(args[1]), 1)    
+        place(int(args[0]), int(args[1]), 1)
         # place the second move (chosen by opponent)
         first_move = [curr, int(args[2])]
         place(curr, int(args[2]), 2)
