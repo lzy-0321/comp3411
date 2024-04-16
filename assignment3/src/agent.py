@@ -18,8 +18,7 @@ boards = np.zeros((10, 10), dtype="int8")
 s = [".","X","O"]
 curr = 0 # this is the current board to play in
 
-first_move_b = 0 # the first move board
-first_move_c = 0 # the first move cell
+MAX_DEPTH = 5
 
 win_conditions = [
     (1, 2, 3),  # Rows
@@ -73,7 +72,15 @@ class GameNode:
         self.value = 0
         self.finished = False
     
-    def add_value(self, value):
+    # value is the number of possible winning conditions that can be formed
+    def cal_value(self):
+        value = 0
+        for i in range(1, 10):
+            for condition in win_conditions:
+                # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1]
+                if any(self.board[i][pos] == self.player for pos in condition) \
+                    and all(self.board[i][pos] != 3 - self.player for pos in condition):
+                    value += 1       
         self.value = value
     
     def is_finished(self):
@@ -97,19 +104,17 @@ class GameTree:
     # the structure of the game tree
     def __init__(self):
         self.root = None
-        self.children = []
 
-    def generate_tree(self, board):
-        self.root = GameNode(board, first_move_b, first_move_c, 2, None) # the root is the first move of the opponent
+    def generate_tree(self, board, first_move):
+        self.root = GameNode(board, first_move[0], first_move[1], 2, None) # the root is the first move of the opponent
         
         self._generate_tree_recursive(self.root, 1, 1)  # Start with depth 1, and player 1 (us)
 
     def _generate_tree_recursive(self, current_node, current_depth, player):
         # Define the maximum depth as a constant, for example, 3 layers deep
-        MAX_DEPTH = 10
-        
+
         if current_depth > MAX_DEPTH:
-            return  # Base case: if current depth exceeds MAX_DEPTH, stop recursion
+            return
         
         current_node.check_finished()
         if current_node.is_finished():
@@ -122,42 +127,36 @@ class GameTree:
                 new_board = current_node.board.copy()
                 new_board[current_node.L][i] = player
                 new_node = GameNode(new_board, current_node.L, i, player, current_node)
-                new_node.add_value(self.cal_value(new_node))
+                if current_depth == MAX_DEPTH:
+                    new_node.cal_value()
                 current_node.children.append(new_node)
                 self._generate_tree_recursive(new_node, current_depth + 1, 3 - player)
     
-    # value is the number of possible winning conditions that can be formed
-    def cal_value(self, node):
-        value = 0
-        for condition in win_conditions:
-            # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1
-            pieces = [node.board[pos] for pos in condition]
-            if any(piece == self.player for piece in pieces) and all(piece != 3 - self.player for piece in pieces):
-                value += 1
-            
-        return value
+    def update_value(self, node, depth):
+        if not node.children or depth == 0:
+            return node.value
+        elif node.player == 1:
+            node.value = min(self.update_value(child, depth - 1) for child in node.children)
+        else:
+            node.value = max(self.update_value(child, depth - 1) for child in node.children)
+        return node.value
     
-   # search the best move in the tree for us, and cut the tree
-    def search_best_move(self):
-        if self.root.children:
-            best_move = max(self.root.children, key=lambda x: x.value)
-            self.cut_tree(best_move)
-            return best_move.L
-        return -1
-
+    def minmax_move(self):
+        print(self.root)
+        self.update_value(self.root, MAX_DEPTH)
+        # return node.L which has the maximum value
+        return max(self.root.children, key=lambda x: x.value).L
+    
     def print_tree(self):
         self._print_tree_recursive(self.root, 0)
         
     def _print_tree_recursive(self, node, depth):
-        print("  " * depth, node.L)
+        print("  " * depth, node.L, node.player, node.value)
         for child in node.children:
             self._print_tree_recursive(child, depth + 1)
 
-tree = GameTree()
-#########################################
-
 # choose a move to play
-def play():
+def play(first_move):
     # print_board(boards)
 
     # just play a random move for now
@@ -167,17 +166,16 @@ def play():
 
     # use minmax tree to choice next step
     # generate the game tree if the root is None
-    if not tree.root:
-        tree.generate_tree(boards)
-        # update the value of the tree
-        tree.update_value(tree.root)
-        # print the tree
+    print_board(boards)
+    tree = GameTree()
+    # print(first_move)
+    tree.generate_tree(boards, first_move)
         
-    tree.print_tree()
-    n = tree.search_best_move()
-
+    n = tree.minmax_move()
+    # tree.print_tree()
     print("playing", n)
     place(curr, n, 1)
+    # print_board(boards)
     return n
 
 # place a move in the global boards
@@ -189,6 +187,7 @@ def place( board, num, player ):
 # read what the server sent us and
 # parse only the strings that are necessary
 def parse(string):
+    first_move = []
     if "(" in string:
         command, args = string.split("(")
         args = args.split(")")[0]
@@ -206,33 +205,32 @@ def parse(string):
     # first move was into square L of sub-board K,
     # and we are expected to return the second move.
     if command == "second_move":
-        first_move_b = int(args[0])
-        first_move_c = int(args[1])
         # place the first move (randomly generated for opponent)
+        print("second move", args)
+        first_move = [int(args[0]), int(args[1])]
         place(int(args[0]), int(args[1]), 2)
-        return play()  # choose and return the second move
+        return play(first_move)  # choose and return the second move
 
     # third_move(K,L,M) means that the first and second move were
     # in square L of sub-board K, and square M of sub-board L,
     # and we are expected to return the third move.
     elif command == "third_move":
+        print("third move", args)
         # place the first move (randomly generated for us)
-        place(int(args[0]), int(args[1]), 1)
-        
-        first_move_b = curr
-        first_move_c = int(args[2])
-        
+        place(int(args[0]), int(args[1]), 1)    
         # place the second move (chosen by opponent)
+        first_move = [curr, int(args[2])]
         place(curr, int(args[2]), 2)
-        return play() # choose and return the third move
+        return play(first_move) # choose and return the third move
 
     # nex_move(M) means that the previous move was into
     # square M of the designated sub-board,
     # and we are expected to return the next move.
     elif command == "next_move":
         # place the previous move (chosen by opponent)
+        first_move = [curr, int(args[0])]
         place(curr, int(args[0]), 2)
-        return play() # choose and return our next move
+        return play(first_move) # choose and return our next move
 
     elif command == "win":
         print("Yay!! We win!! :)")
