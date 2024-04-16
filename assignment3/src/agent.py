@@ -18,7 +18,7 @@ boards = np.zeros((10, 10), dtype="int8")
 s = [".","X","O"]
 curr = 0 # this is the current board to play in
 
-MAX_DEPTH = 5
+MAX_DEPTH = 4
 
 win_conditions = [
     (1, 2, 3),  # Rows
@@ -248,7 +248,7 @@ def parse(string):
     # and we are expected to return the second move.
     if command == "second_move":
         # place the first move (randomly generated for opponent)
-        print("second move", args)
+        # print("second move", args)
         first_move = [int(args[0]), int(args[1])]
         place(int(args[0]), int(args[1]), 2)
         return play(first_move)  # choose and return the second move
@@ -257,7 +257,7 @@ def parse(string):
     # in square L of sub-board K, and square M of sub-board L,
     # and we are expected to return the third move.
     elif command == "third_move":
-        print("third move", args)
+        # print("third move", args)
         # place the first move (randomly generated for us)
         place(int(args[0]), int(args[1]), 1)
         # place the second move (chosen by opponent)
