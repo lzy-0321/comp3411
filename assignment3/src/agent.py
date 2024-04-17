@@ -18,7 +18,7 @@ boards = np.zeros((10, 10), dtype="int8")
 s = [".","X","O"]
 curr = 0 # this is the current board to play in
 
-MAX_DEPTH = 4
+MAX_DEPTH = 5
 
 win_conditions = [
     (1, 2, 3),  # Rows
@@ -72,9 +72,6 @@ class GameNode:
         self.value = 0
         self.finished = False
 
-    def change_value(self, value):
-        self.value = value
-
     # value is the number of possible winning conditions that can be formed
     def cal_value(self):
         value = 0
@@ -118,7 +115,7 @@ class GameTree:
             return
         current_node.check_finished()
         if current_node.is_finished():
-            # If the current board is finished, check next sub-board
+            current_node.value = 100
             return
 
         # we check in the current board's sub-board(parent's L)
@@ -156,8 +153,8 @@ class GameTree:
             self._print_tree_recursive(child, depth + 1)
 
     # alpha-beta pruning
-    def minmax_alpha_beta(self):
-        clf = self.max_value(self.root, -np.inf, np.inf)
+    def alpha_beta(self):
+        clf = self.min_value(self.root, -np.inf, np.inf)
         for child in self.root.children:
             print('child', child.value, "clf",clf)
             if child.value == clf:
@@ -174,7 +171,7 @@ class GameTree:
             if clf >= beta:
                 return clf
             alpha = max(alpha, clf)
-        node.change_value(clf)
+        node.value = clf
         return clf
 
     def min_value(self, node, alpha, beta):
@@ -187,7 +184,7 @@ class GameTree:
             if clf <= alpha:
                 return clf
             beta = min(beta, clf)
-        node.change_value(clf)
+        node.value = clf
         return clf
 
     def get_value(self, node):
@@ -214,11 +211,11 @@ def play(first_move):
     # print(first_move)
     tree.generate_tree(boards, first_move)
 
-    n = tree.minmax_alpha_beta()
-    tree.print_tree()
+    n = tree.alpha_beta()
+    # tree.print_tree()
     print("playing", n)
     place(curr, n, 1)
-    # print_board(boards)
+    print_board(boards)
     return n
 
 # place a move in the global boards
