@@ -18,7 +18,8 @@ boards = np.zeros((10, 10), dtype="int8")
 s = [".","X","O"]
 curr = 0 # this is the current board to play in
 
-MAX_DEPTH = 5
+max_depth = 0
+round = 0
 
 win_conditions = [
     (1, 2, 3),  # Rows
@@ -76,10 +77,11 @@ class GameNode:
     def cal_value(self):
         value = 0
         for condition in win_conditions:
-            # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1]
-            if any(self.board[self.k][pos] == self.player for pos in condition) \
-                and all(self.board[self.k][pos] != 3 - self.player for pos in condition):
-                value += 1
+            # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1
+            for pos in condition:
+                if all(self.board[self.k][pos] != 3 - self.player for pos in condition):
+                    if self.board[self.k][pos] == self.player:
+                        value += 1
         self.value = value
 
     def is_finished(self):
@@ -111,11 +113,11 @@ class GameTree:
     def _generate_tree_recursive(self, current_node, current_depth, player):
         # Define the maximum depth as a constant, for example, 3 layers deep
 
-        if current_depth > MAX_DEPTH:
+        if current_depth > max_depth:
             return
         current_node.check_finished()
         if current_node.is_finished():
-            current_node.value = 100
+            current_node.value = 100 + max_depth - current_depth
             return
 
         # we check in the current board's sub-board(parent's L)
@@ -124,25 +126,25 @@ class GameTree:
                 new_board = current_node.board.copy()
                 new_board[current_node.L][i] = player
                 new_node = GameNode(new_board, current_node.L, i, player, current_node)
-                if current_depth == MAX_DEPTH:
+                if current_depth == max_depth:
                     new_node.cal_value()
                 current_node.children.append(new_node)
                 self._generate_tree_recursive(new_node, current_depth + 1, 3 - player)
 
-    def update_value(self, node, depth):
-        if not node.children or depth == 0:
-            return node.value
-        elif node.player == 1:
-            node.value = min(self.update_value(child, depth - 1) for child in node.children)
-        else:
-            node.value = max(self.update_value(child, depth - 1) for child in node.children)
-        return node.value
+    # def update_value(self, node, depth):
+    #     if not node.children or depth == 0:
+    #         return node.value
+    #     elif node.player == 1:
+    #         node.value = min(self.update_value(child, depth - 1) for child in node.children)
+    #     else:
+    #         node.value = max(self.update_value(child, depth - 1) for child in node.children)
+    #     return node.value
 
-    def minmax_move(self):
-        print(self.root)
-        self.update_value(self.root, MAX_DEPTH)
-        # return node.L which has the maximum value
-        return max(self.root.children, key=lambda x: x.value).L
+    # def minmax_move(self):
+    #     print(self.root)
+    #     self.update_value(self.root, max_depth)
+    #     # return node.L which has the maximum value
+    #     return max(self.root.children, key=lambda x: x.value).L
 
     def print_tree(self):
         self._print_tree_recursive(self.root, 0)
@@ -195,6 +197,21 @@ class GameTree:
             return False
         return True
 
+# update the max depth of the minmax tree
+def update_depth(round):
+    if round < 3:
+        return 4
+    elif round < 10:
+        return 5
+    elif round < 20:
+        return 6
+    elif round < 40:
+        return 9
+    elif round < 50:
+        return 10
+    else:
+        return 11
+
 # choose a move to play
 def play(first_move):
     # print_board(boards)
@@ -206,20 +223,26 @@ def play(first_move):
 
     # use minmax tree to choice next step
     # generate the game tree if the root is None
+    global round
+    global max_depth
+    round += 1
+    print("round", round, "=====================")
+    max_depth = update_depth(round)
     print_board(boards)
     tree = GameTree()
     # print(first_move)
     tree.generate_tree(boards, first_move)
 
     n = tree.alpha_beta()
-    # tree.print_tree()
+    #tree.print_tree()
     print("playing", n)
     place(curr, n, 1)
+    print("our move", curr, n)
     print_board(boards)
     return n
 
 # place a move in the global boards
-def place( board, num, player ):
+def place(board, num, player):
     global curr
     curr = num
     boards[board][num] = player
@@ -268,6 +291,7 @@ def parse(string):
     elif command == "next_move":
         # place the previous move (chosen by opponent)
         first_move = [curr, int(args[0])]
+        print("enemy move", curr, int(args[0]))
         place(curr, int(args[0]), 2)
         return play(first_move) # choose and return our next move
 
