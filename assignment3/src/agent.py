@@ -72,15 +72,17 @@ class GameNode:
         self.value = 0
         self.finished = False
 
+    def change_value(self, value):
+        self.value = value
+
     # value is the number of possible winning conditions that can be formed
     def cal_value(self):
         value = 0
-        for i in range(1, 10):
-            for condition in win_conditions:
-                # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1]
-                if any(self.board[i][pos] == self.player for pos in condition) \
-                    and all(self.board[i][pos] != 3 - self.player for pos in condition):
-                    value += 1
+        for condition in win_conditions:
+            # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1]
+            if any(self.board[self.k][pos] == self.player for pos in condition) \
+                and all(self.board[self.k][pos] != 3 - self.player for pos in condition):
+                value += 1
         self.value = value
 
     def is_finished(self):
@@ -153,14 +155,13 @@ class GameTree:
         for child in node.children:
             self._print_tree_recursive(child, depth + 1)
 
-class AlphaBetaTree:
-    def __init__(self, gameTree):
-        self.game_tree = gameTree
-
-    def minmax_alpha_beta(self, node):
-        clf = self.min_value(node, -np.inf, np.inf)
-        for child in node.children:
+    # alpha-beta pruning
+    def minmax_alpha_beta(self):
+        clf = self.max_value(self.root, -np.inf, np.inf)
+        for child in self.root.children:
+            print('child', child.value, "clf",clf)
             if child.value == clf:
+                print("value", clf, "node", child.k, child.L)
                 return child.L
 
     def max_value(self, node, alpha, beta):
@@ -173,7 +174,7 @@ class AlphaBetaTree:
             if clf >= beta:
                 return clf
             alpha = max(alpha, clf)
-        node.value = clf
+        node.change_value(clf)
         return clf
 
     def min_value(self, node, alpha, beta):
@@ -186,7 +187,7 @@ class AlphaBetaTree:
             if clf <= alpha:
                 return clf
             beta = min(beta, clf)
-        node.value = clf
+        node.change_value(clf)
         return clf
 
     def get_value(self, node):
@@ -212,10 +213,9 @@ def play(first_move):
     tree = GameTree()
     # print(first_move)
     tree.generate_tree(boards, first_move)
-    tree = AlphaBetaTree(tree)
 
-    n = tree.minmax_alpha_beta(tree.game_tree.root)
-    # tree.print_tree()
+    n = tree.minmax_alpha_beta()
+    tree.print_tree()
     print("playing", n)
     place(curr, n, 1)
     # print_board(boards)
