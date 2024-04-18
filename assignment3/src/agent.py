@@ -4,7 +4,6 @@
 #  COMP3411/9814 Artificial Intelligence
 #  CSE, UNSW
 
-import random
 import socket
 import sys
 import numpy as np
@@ -33,6 +32,10 @@ win_conditions = [
     (1, 5, 9),  # Diagonals
     (3, 5, 7)
 ]
+
+coner_ponsitions = [1, 3, 7, 9]
+center_ponsitions = [2, 4, 6, 8]
+center = [5]
 
 # print a row
 def print_board_row(bd, a, b, c, i, j, k):
@@ -96,15 +99,49 @@ class GameNode:
         self.value = 0
         self.finished = False
 
+    def small_board_value_cal(self, i):
+        agent_value = 0
+        agent_counter = 0
+        opponent_counter = 0
+        value = 1
+        center_value1 = 4
+        center_value2 = 3
+        coner_value = 2
+        for condition in win_conditions:
+            # pos1, pos2, pos3 = condition[0], condition[1], condition[2]
+            for pos in condition:
+                if self.board[i][pos] == self.player:
+                    agent_counter += 1
+                elif self.board[i][pos] == 3 - self.player:
+                    opponent_counter += 1
+                if pos == center:
+                    agent_value += center_value1
+                elif any(pos == node for node in center_ponsitions):
+                    agent_value += center_value2
+                elif any(pos == node for node in coner_ponsitions):
+                    agent_value += coner_value
+
+                # three pos connected
+                if agent_counter == 3:
+                    value = agent_value * 1000
+                elif agent_counter == 2 and opponent_counter == 0:
+                    value = agent_value * 100
+                elif agent_counter == 1 and opponent_counter == 0:
+                    value = agent_value * 10
+                elif opponent_counter == 3:
+                    value = agent_value * -1000
+                elif opponent_counter == 2 and agent_counter == 0:
+                    value = agent_value * -100
+                elif opponent_counter == 1 and agent_counter == 0:
+                    value = agent_value * -10
+        return value
+
     # value is the number of possible winning conditions that can be formed
     def cal_value(self):
         value = 0
-        for condition in win_conditions:
-            # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1]
-            if any(self.board[self.k][pos] == self.player for pos in condition) \
-                and all(self.board[self.k][pos] != 3 - self.player for pos in condition):
-                value += 1
-        self.value = value
+        for i in range(1, 10):
+            value += self.small_board_value_cal(i)
+        return value
 
     def is_finished(self):
         return self.finished
@@ -128,44 +165,50 @@ class GameTree:
     def __init__(self):
         self.root = None
 
-    def check_finished(self):
-        # check if the board is finished
-        # check the board is win or not
-        # The game is won by getting three-in-a row either horizontally, vertically or diagonally in one of the nine boards.
-        # we check the small board one by one
-        # Define win conditions (patterns) for a 3x3 board
-
-        # Check each small board one by one
-        for i in range(1, 10):  # Assuming 9 small boards, indexed from 1 to 9
-            for condition in win_conditions:
-                if all(self.board[i][pos] == self.player for pos in condition):
-                    self.finished = True
-                    return
-
     def generate_tree(self, board, first_move):
-        deep = 1
-        pre_move = first_move[1]
-        best_moves, best_move_score = [], -np.inf
-        for i in range(1, 10):
-            if board[pre_move][i] == 0:
-                move = i
-                board[first_move[1]][move] = 1 # place the move
-                move_value = self.alpha_beta_generate(board, curr, move, 1, -np.inf, np.inf, deep)
-                board[first_move[1]][move] = 0 # remove the move
-                if move_value > best_move_score:
-                    best_moves = [move]
-                    best_move_score = move_value
-                elif move_value == best_move_score:
-                    best_moves.append(move)
-                return random.choice(best_moves)
+        self.root = GameNode(board, first_move[0], first_move[1], 2, None) # the root is the first move of the opponent
+        self._generate_tree_recursive(self.root, 1, 1)  # Start with depth 1, and player 1 (us)
 
-    def alpha_beta_generate(self, board, k, L, player, alpha, beta, deep):
-        moves = []
-        for i in range(1, 10):
-            if board[L][i] == 0:
-                moves.append(i)
-        self
-        
+    def _generate_tree_recursive(self, current_node, current_depth, player):
+        # Define the maximum depth as a constant, for example, 3 layers deep
+
+        if current_depth > max_depth:
+            return
+
+        current_node.check_finished()
+        if current_node.is_finished():
+            if current_node.player == 1:
+                current_node.value = 100000 * (max_depth + 1 - current_depth)
+            else:
+                current_node.value = -100000 * (max_depth + 1 - current_depth)
+            return
+
+        # we check in the current board's sub-board(parent's L)
+        for i in range(1, 10):  # Assuming board indices go from 1 to 9
+            if current_node.board[current_node.L][i] == 0:
+                new_board = current_node.board.copy()
+                new_board[current_node.L][i] = player
+                new_node = GameNode(new_board, current_node.L, i, player, current_node)
+                if current_depth == max_depth:
+                    new_node_value = new_node.cal_value()
+                    new_node.value = new_node_value
+                current_node.children.append(new_node)
+                self._generate_tree_recursive(new_node, current_depth + 1, 3 - player)
+
+    # def update_value(self, node, depth):
+    #     if not node.children or depth == 0:
+    #         return node.value
+    #     elif node.player == 1:
+    #         node.value = min(self.update_value(child, depth - 1) for child in node.children)
+    #     else:
+    #         node.value = max(self.update_value(child, depth - 1) for child in node.children)
+    #     return node.value
+
+    # def minmax_move(self):
+    #     print(self.root)
+    #     self.update_value(self.root, max_depth)
+    #     # return node.L which has the maximum value
+    #     return max(self.root.children, key=lambda x: x.value).L
 
     def print_tree(self, file):
         self._print_tree_recursive(self.root, 0, file)
@@ -176,18 +219,62 @@ class GameTree:
             for child in node.children:
                 self._print_tree_recursive(child, depth + 1, file)
 
+    # alpha-beta pruning
+    def alpha_beta(self, depth):
+        value = []
+        for child in self.root.children:
+            value.append(self.max_value(child, -np.inf, np.inf, depth))
+        min_value = min(value)
+        # if multiple moves have the same value, choose the random one
+        return np.random.choice([child.L for child in self.root.children if child.value == min_value])
+
+    def max_value(self, node, alpha, beta, depth):
+        if depth == 0 or self.isTerminal(node):
+            return self.get_value(node)
+        clf = -np.inf
+        for child in node.children:
+            temp_value = self.min_value(child, alpha, beta, depth - 1)
+            clf = max(clf, temp_value)
+            if clf >= beta:
+                return clf
+            alpha = max(alpha, clf)
+        node.value = clf
+        return clf
+
+    def min_value(self, node, alpha, beta, depth):
+        if depth == 0 or self.isTerminal(node):
+            return self.get_value(node)
+        clf = np.inf
+        for child in node.children:
+            temp_value = self.max_value(child, alpha, beta, depth - 1)
+            clf = min(clf, temp_value)
+            if clf <= alpha:
+                return clf
+            beta = min(beta, clf)
+        node.value = clf
+        return clf
+
+    def get_value(self, node):
+        return node.value
+
+    def isTerminal(self, node):
+        # no children
+        if node.children == []:
+            return True
+        return False
+
 # update the max depth of the minmax tree
 def update_depth(round):
     if round < 3:
         return 3
     elif round < 10:
-        return 4
+        return 3
     elif round < 20:
         return 5
     elif round < 40:
-        return 6
+        return 7
     elif round < 50:
-        return 10
+        return 9
     else:
         return 11
 
@@ -214,7 +301,7 @@ def play(first_move):
     # print("minmax tree=================================", file=output_file)
     # tree.print_tree(output_file)
     # n equals to the move that has the value is value
-    n = tree.alpha_beta()
+    n = tree.alpha_beta(max_depth)
     print("alpha beta cut tree=========================", file=output_file)
     tree.print_tree(output_file)
     print("playing", n)
