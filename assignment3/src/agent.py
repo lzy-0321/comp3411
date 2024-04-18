@@ -4,6 +4,7 @@
 #  COMP3411/9814 Artificial Intelligence
 #  CSE, UNSW
 
+import random
 import socket
 import sys
 import numpy as np
@@ -20,6 +21,7 @@ curr = 0 # this is the current board to play in
 
 max_depth = 0
 round = 0
+output_file = open("game_output.txt", "w")
 
 win_conditions = [
     (1, 2, 3),  # Rows
@@ -53,6 +55,27 @@ def print_board(board):
     print_board_row(board, 7,8,9,7,8,9)
     print()
 
+################################################################################
+#print board to txt file
+
+def print_board_row(bd, a, b, c, i, j, k, output_file):
+    print(" "+s[bd[a][i]]+" "+s[bd[a][j]]+" "+s[bd[a][k]]+" | " \
+             +s[bd[b][i]]+" "+s[bd[b][j]]+" "+s[bd[b][k]]+" | " \
+             +s[bd[c][i]]+" "+s[bd[c][j]]+" "+s[bd[c][k]], file=output_file)
+
+def print_board_txt(board, output_file):
+    print_board_row(board, 1,2,3,1,2,3, output_file)
+    print_board_row(board, 1,2,3,4,5,6, output_file)
+    print_board_row(board, 1,2,3,7,8,9, output_file)
+    print(" ------+-------+------", file=output_file)
+    print_board_row(board, 4,5,6,1,2,3, output_file)
+    print_board_row(board, 4,5,6,4,5,6, output_file)
+    print_board_row(board, 4,5,6,7,8,9, output_file)
+    print(" ------+-------+------", file=output_file)
+    print_board_row(board, 7,8,9,1,2,3, output_file)
+    print_board_row(board, 7,8,9,4,5,6, output_file)
+    print_board_row(board, 7,8,9,7,8,9, output_file)
+    print("", file=output_file)
 
 #########################################
 # the structure for the game tree
@@ -77,11 +100,10 @@ class GameNode:
     def cal_value(self):
         value = 0
         for condition in win_conditions:
-            # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1
-            for pos in condition:
-                if all(self.board[self.k][pos] != 3 - self.player for pos in condition):
-                    if self.board[self.k][pos] == self.player:
-                        value += 1
+            # for one condition, if we at least place one chess piece, and no opponent's chess piece, value += 1]
+            if any(self.board[self.k][pos] == self.player for pos in condition) \
+                and all(self.board[self.k][pos] != 3 - self.player for pos in condition):
+                value += 1
         self.value = value
 
     def is_finished(self):
@@ -106,107 +128,64 @@ class GameTree:
     def __init__(self):
         self.root = None
 
+    def check_finished(self):
+        # check if the board is finished
+        # check the board is win or not
+        # The game is won by getting three-in-a row either horizontally, vertically or diagonally in one of the nine boards.
+        # we check the small board one by one
+        # Define win conditions (patterns) for a 3x3 board
+
+        # Check each small board one by one
+        for i in range(1, 10):  # Assuming 9 small boards, indexed from 1 to 9
+            for condition in win_conditions:
+                if all(self.board[i][pos] == self.player for pos in condition):
+                    self.finished = True
+                    return
+
     def generate_tree(self, board, first_move):
-        self.root = GameNode(board, first_move[0], first_move[1], 2, None) # the root is the first move of the opponent
-        self._generate_tree_recursive(self.root, 1, 1)  # Start with depth 1, and player 1 (us)
+        deep = 1
+        pre_move = first_move[1]
+        best_moves, best_move_score = [], -np.inf
+        for i in range(1, 10):
+            if board[pre_move][i] == 0:
+                move = i
+                board[first_move[1]][move] = 1 # place the move
+                move_value = self.alpha_beta_generate(board, curr, move, 1, -np.inf, np.inf, deep)
+                board[first_move[1]][move] = 0 # remove the move
+                if move_value > best_move_score:
+                    best_moves = [move]
+                    best_move_score = move_value
+                elif move_value == best_move_score:
+                    best_moves.append(move)
+                return random.choice(best_moves)
 
-    def _generate_tree_recursive(self, current_node, current_depth, player):
-        # Define the maximum depth as a constant, for example, 3 layers deep
+    def alpha_beta_generate(self, board, k, L, player, alpha, beta, deep):
+        moves = []
+        for i in range(1, 10):
+            if board[L][i] == 0:
+                moves.append(i)
+        self
+        
 
-        if current_depth > max_depth:
-            return
-        current_node.check_finished()
-        if current_node.is_finished():
-            current_node.value = 100 + max_depth - current_depth
-            return
+    def print_tree(self, file):
+        self._print_tree_recursive(self.root, 0, file)
 
-        # we check in the current board's sub-board(parent's L)
-        for i in range(1, 10):  # Assuming board indices go from 1 to 9
-            if current_node.board[current_node.L][i] == 0:
-                new_board = current_node.board.copy()
-                new_board[current_node.L][i] = player
-                new_node = GameNode(new_board, current_node.L, i, player, current_node)
-                if current_depth == max_depth:
-                    new_node.cal_value()
-                current_node.children.append(new_node)
-                self._generate_tree_recursive(new_node, current_depth + 1, 3 - player)
-
-    # def update_value(self, node, depth):
-    #     if not node.children or depth == 0:
-    #         return node.value
-    #     elif node.player == 1:
-    #         node.value = min(self.update_value(child, depth - 1) for child in node.children)
-    #     else:
-    #         node.value = max(self.update_value(child, depth - 1) for child in node.children)
-    #     return node.value
-
-    # def minmax_move(self):
-    #     print(self.root)
-    #     self.update_value(self.root, max_depth)
-    #     # return node.L which has the maximum value
-    #     return max(self.root.children, key=lambda x: x.value).L
-
-    def print_tree(self):
-        self._print_tree_recursive(self.root, 0)
-
-    def _print_tree_recursive(self, node, depth):
-        print("  " * depth, node.L, node.player, node.value)
-        for child in node.children:
-            self._print_tree_recursive(child, depth + 1)
-
-    # alpha-beta pruning
-    def alpha_beta(self):
-        clf = self.min_value(self.root, -np.inf, np.inf)
-        for child in self.root.children:
-            print('child', child.value, "clf",clf)
-            if child.value == clf:
-                print("value", clf, "node", child.k, child.L)
-                return child.L
-
-    def max_value(self, node, alpha, beta):
-        if self.isTerminal(node):
-            return self.get_value(node)
-        clf = -np.inf
-        for child in node.children:
-            temp_value = self.min_value(child, alpha, beta)
-            clf = max(clf, temp_value)
-            if clf >= beta:
-                return clf
-            alpha = max(alpha, clf)
-        node.value = clf
-        return clf
-
-    def min_value(self, node, alpha, beta):
-        if self.isTerminal(node):
-            return self.get_value(node)
-        clf = np.inf
-        for child in node.children:
-            temp_value = self.max_value(child, alpha, beta)
-            clf = min(clf, temp_value)
-            if clf <= alpha:
-                return clf
-            beta = min(beta, clf)
-        node.value = clf
-        return clf
-
-    def get_value(self, node):
-        return node.value
-
-    def isTerminal(self, node):
-        if node.value == 0:
-            return False
-        return True
+    def _print_tree_recursive(self, node, depth, file):
+        if node is not None:
+            print("  " * depth + f"{node.L} {node.player} {node.value}", file=file)
+            for child in node.children:
+                self._print_tree_recursive(child, depth + 1, file)
 
 # update the max depth of the minmax tree
 def update_depth(round):
     if round < 3:
-        return 4
+        return 3
     elif round < 10:
-        return 5
+        return 4
     elif round < 20:
-        return 6
+        return 5
     elif round < 40:
-        return 9
+        return 6
     elif round < 50:
         return 10
     else:
@@ -225,20 +204,23 @@ def play(first_move):
     # generate the game tree if the root is None
     global round
     global max_depth
+    global output_file
     round += 1
-    print("round", round, "=====================")
+    print("round", round, "=====================", file=output_file)
     max_depth = update_depth(round)
-    print_board(boards)
+    print_board_txt(boards, output_file)
     tree = GameTree()
-    # print(first_move)
     tree.generate_tree(boards, first_move)
-
+    # print("minmax tree=================================", file=output_file)
+    # tree.print_tree(output_file)
+    # n equals to the move that has the value is value
     n = tree.alpha_beta()
-    #tree.print_tree()
+    print("alpha beta cut tree=========================", file=output_file)
+    tree.print_tree(output_file)
     print("playing", n)
+    print("our move", curr, n, file=output_file)
     place(curr, n, 1)
-    print("our move", curr, n)
-    print_board(boards)
+    print_board_txt(boards, output_file)
     return n
 
 # place a move in the global boards
@@ -280,8 +262,10 @@ def parse(string):
         # print("third move", args)
         # place the first move (randomly generated for us)
         place(int(args[0]), int(args[1]), 1)
+        print("our move", int(args[0]), int(args[1]), file=output_file)
         # place the second move (chosen by opponent)
         first_move = [curr, int(args[2])]
+        print("enemy move", curr, int(args[2]), file=output_file)
         place(curr, int(args[2]), 2)
         return play(first_move) # choose and return the third move
 
@@ -291,7 +275,7 @@ def parse(string):
     elif command == "next_move":
         # place the previous move (chosen by opponent)
         first_move = [curr, int(args[0])]
-        print("enemy move", curr, int(args[0]))
+        print("enemy move", curr, int(args[0]), file=output_file)
         place(curr, int(args[0]), 2)
         return play(first_move) # choose and return our next move
 
@@ -323,5 +307,10 @@ def main():
             elif response > 0:
                 s.sendall((str(response) + "\n").encode())
 
+def close_output():
+    global output_file
+    output_file.close()
+
 if __name__ == "__main__":
     main()
+    output_file.close()
