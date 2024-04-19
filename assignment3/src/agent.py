@@ -22,7 +22,7 @@ curr = 0 # this is the current board to play in
 max_depth = 0
 round = 0
 max_size = 3 ** 10
-output_file = open("game_output.txt", "w")
+# output_file = open("game_output.txt", "w")
 
 win_conditions = [
     (1, 2, 3),  # Rows
@@ -268,15 +268,15 @@ def play(first_move):
     global max_depth
     global output_file
     round += 1
-    print("round", round, "=====================", file=output_file)
+    # print("round", round, "=====================", file=output_file)
     max_depth = update_depth(round)
-    print_board_txt(boards, output_file)
+    # print_board_txt(boards, output_file)
     tree = GameTree()
     n = tree.generate_tree(boards, first_move)
     print("playing", n)
-    print("our move", curr, n, file=output_file)
+    # print("our move", curr, n, file=output_file)
     place(curr, n, 1)
-    print_board_txt(boards, output_file)
+    # print_board_txt(boards, output_file)
     return n
 
 # place a move in the global boards
