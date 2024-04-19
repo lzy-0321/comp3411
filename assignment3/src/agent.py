@@ -65,24 +65,24 @@ def print_board(board):
 ################################################################################
 #print board to txt file
 
-def print_board_row(bd, a, b, c, i, j, k, output_file):
-    print(" "+s[bd[a][i]]+" "+s[bd[a][j]]+" "+s[bd[a][k]]+" | " \
-             +s[bd[b][i]]+" "+s[bd[b][j]]+" "+s[bd[b][k]]+" | " \
-             +s[bd[c][i]]+" "+s[bd[c][j]]+" "+s[bd[c][k]], file=output_file)
+# def print_board_row(bd, a, b, c, i, j, k, output_file):
+#     print(" "+s[bd[a][i]]+" "+s[bd[a][j]]+" "+s[bd[a][k]]+" | " \
+#              +s[bd[b][i]]+" "+s[bd[b][j]]+" "+s[bd[b][k]]+" | " \
+#              +s[bd[c][i]]+" "+s[bd[c][j]]+" "+s[bd[c][k]], file=output_file)
 
-def print_board_txt(board, output_file):
-    print_board_row(board, 1,2,3,1,2,3, output_file)
-    print_board_row(board, 1,2,3,4,5,6, output_file)
-    print_board_row(board, 1,2,3,7,8,9, output_file)
-    print(" ------+-------+------", file=output_file)
-    print_board_row(board, 4,5,6,1,2,3, output_file)
-    print_board_row(board, 4,5,6,4,5,6, output_file)
-    print_board_row(board, 4,5,6,7,8,9, output_file)
-    print(" ------+-------+------", file=output_file)
-    print_board_row(board, 7,8,9,1,2,3, output_file)
-    print_board_row(board, 7,8,9,4,5,6, output_file)
-    print_board_row(board, 7,8,9,7,8,9, output_file)
-    print("", file=output_file)
+# def print_board_txt(board, output_file):
+#     print_board_row(board, 1,2,3,1,2,3, output_file)
+#     print_board_row(board, 1,2,3,4,5,6, output_file)
+#     print_board_row(board, 1,2,3,7,8,9, output_file)
+#     print(" ------+-------+------", file=output_file)
+#     print_board_row(board, 4,5,6,1,2,3, output_file)
+#     print_board_row(board, 4,5,6,4,5,6, output_file)
+#     print_board_row(board, 4,5,6,7,8,9, output_file)
+#     print(" ------+-------+------", file=output_file)
+#     print_board_row(board, 7,8,9,1,2,3, output_file)
+#     print_board_row(board, 7,8,9,4,5,6, output_file)
+#     print_board_row(board, 7,8,9,7,8,9, output_file)
+#     print("", file=output_file)
 
 #########################################
 # the structure for the game tree
@@ -318,10 +318,10 @@ def parse(string):
         # print("third move", args)
         # place the first move (randomly generated for us)
         place(int(args[0]), int(args[1]), 1)
-        print("our move", int(args[0]), int(args[1]), file=output_file)
+        # print("our move", int(args[0]), int(args[1]), file=output_file)
         # place the second move (chosen by opponent)
         first_move = [curr, int(args[2])]
-        print("enemy move", curr, int(args[2]), file=output_file)
+        # print("enemy move", curr, int(args[2]), file=output_file)
         place(curr, int(args[2]), 2)
         return play(first_move) # choose and return the third move
 
@@ -331,7 +331,7 @@ def parse(string):
     elif command == "next_move":
         # place the previous move (chosen by opponent)
         first_move = [curr, int(args[0])]
-        print("enemy move", curr, int(args[0]), file=output_file)
+        # print("enemy move", curr, int(args[0]), file=output_file)
         place(curr, int(args[0]), 2)
         return play(first_move) # choose and return our next move
 
@@ -363,10 +363,6 @@ def main():
             elif response > 0:
                 s.sendall((str(response) + "\n").encode())
 
-def close_output():
-    global output_file
-    output_file.close()
-
 if __name__ == "__main__":
     main()
-    output_file.close()
+    # output_file.close()
