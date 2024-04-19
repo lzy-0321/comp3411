@@ -37,6 +37,8 @@ win_conditions = [
 
 center = [5]
 corners = [1, 3, 7, 9]
+sub_board_values = {}
+board_values = {}
 
 # print a row
 def print_board_row(bd, a, b, c, i, j, k):
@@ -87,7 +89,7 @@ def print_board_txt(board, output_file):
 class GameTree:
     # the structure of the game tree
     def __init__(self):
-        self.sub_board_value = [None] * (3 ** 10)  # 初始化列表，假设初始值为 None
+        self.tree = {}
 
     def cal_value_condition(self, sub_board, condition):
         point_1 = sub_board[condition[0]]
@@ -123,21 +125,40 @@ class GameTree:
         else:
             return 0
 
-    def sub_board_to_index(self, sub_board):
-        index = 0
-        n = len(sub_board)
-        for i in range(n):
-            index += sub_board[i] * (3 ** (n-1-i))
-        return index
+    # def board_to_index(self, board):
+    #     index = 0
+    #     n = len(board)
+    #     for i in range(n):
+    #         index += board[i] * (3 ** (n-1-i))
+    #     return index
+
+    # def sub_board_to_index(self, sub_board):
+    #     index = 0
+    #     n = len(sub_board)
+    #     for i in range(n):
+    #         index += sub_board[i] * (3 ** (n-1-i))
+    #     return index
 
     def cal_value(self, sub_board):
+        index = str(sub_board)
+        if index in sub_board_values:
+            return sub_board_values[index]
+
         value = 0
-        index = self.sub_board_to_index(sub_board)
-        if self.sub_board_value[index] is not None:
-            return self.sub_board_value[index]
         for condition in win_conditions:
             value += self.cal_value_condition(sub_board, condition)
-        self.sub_board_value[index] = value
+        sub_board_values[index] = value
+        return value
+
+    def cal_board_value(self, board):
+        index = str(board)
+        if index in board_values:  # 注意：这里也可以使用一个专门的board_values字典
+            return board_values[index]
+
+        value = 0
+        for i in range(1, 10):
+            value += self.cal_value(board[i])
+        board_values[index] = value
         return value
 
     def check_finished(self, board):
@@ -187,10 +208,7 @@ class GameTree:
 
         if deep == max_depth:
             # we need to calculate the value of the node
-            value = 0
-            for i in range(1, 10):
-                # we check the value in the sub-board
-                value += self.cal_value(board[i])
+            value = self.cal_board_value(board)
             return value
 
         # we assume that we are the player 1
@@ -218,7 +236,7 @@ def update_depth(round):
     elif round < 10:
         return 5
     elif round < 20:
-        return 7
+        return 5
     elif round < 40:
         return 6
     elif round < 50:
