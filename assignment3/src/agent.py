@@ -240,15 +240,17 @@ class GameTree:
 def update_depth(round):
     if round < 3:
         return 3
-    elif round < 10:
+    elif round < 11:
         return 5
     elif round < 15:
         return 6
-    elif round < 18:
+    elif round < 17:
         return 7
-    elif round < 21:
+    elif round < 20:
         return 8
-    elif round < 50:
+    elif round < 29:
+        return 9
+    elif round < 40:
         return 10
     else:
         return 11
