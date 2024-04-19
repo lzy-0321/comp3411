@@ -4,6 +4,58 @@
 #  COMP3411/9814 Artificial Intelligence
 #  CSE, UNSW
 
+"""
+Ziyao Lu z5340468 
+Hanxi Ma z5365221
+
+Question: Briefly describe how your program works, including any algorithms and data structures employed, and explain 
+any design decisions you made along the way.
+
+Initially, we used a minimax tree to analyze the possible moves on the board and determine the next move based on the calculated 
+board values, which represent the potential number of ways that the agent can form a line of three nodes.However, due to the 
+inefficiency of the minimax algorithm causing timeouts, we switched to use alpha-beta pruning tree.
+
+By storing the opponent's last move as the root of the AB tree, we apply alpha-beta pruning recursively to explore all possible moves. 
+At each depth of recursion, either when reaching the maximum depth or when one side wins, we read (if the same board state has been 
+previously evaluated) or compute a heuristic value. The alpha-beta recursion updates this value and prunes branches accordingly. And 
+in all optimal choices (max value), we randomly select one move to avoid always choosing the first optimal solution.
+
+After implementing AB pruning search, we found that calculating the node values directly wasn't good enough. Therefore, we switched 
+to use heuristics. This involved counting the number of agent's, opponent's, and empty cells in each row, column, and diagonal of the 
+current mini-board. We also considered the positions of these cells to calculate a heuristic value.
+
+In this heuristic approach:
+- The node in the center of the board carry have highest weight.
+- Midpoints of rows, columns, and diagonals have slightly lower weights compared to the center.
+- The node in the four corners of the board carry the lowest weight.
+
+Then we use these weights and the counter of agent's and opponent's nodes in each row, column, and diagonal to calculate the heuristic 
+value(e.g there are only one agent in the diagional). 
+
+In our code, we also implemented dynamic depth for the AB tree. The reason why we using dynamic depth is due to that at the beginning 
+of the game, we don't need to search very deeply in the tree because the probability of pruning is quite small, and if we search depply 
+in the beginning which may lead to timeout.
+
+Therefore, the depth of the AB tree is adjusted dynamically based on the current game round. As the game processing and more moves are
+made (the game round increases), we increase the depth of the tree search. 
+
+-------------------------请加在这里
+
+So far, our code can run up to level 8 without timeout, but the win rate is not 100%. We think the next improvement needed is in 
+the heuristic value calculation. It may require more detailed analysis of possible board states, but due to ddl is coming we do not 
+have much time, so we have not implemented this step yet.
+
+Additionally, we have some other ideas that we have not implemented yet:
+
+- Since our tree doesn't need to go very deep in the early rounds of the game, there are rounds required time is much short. Therefore, 
+we can potentially save time for later rounds by pre-computing the values of other boards during the initial rounds.
+
+- Because the board is symmetrical (nodes can appear symmetrically), although node positions are symmetric, their indices are different.
+Maybe we can use mathematical methods to align them in dictionaries, which can save time during evaluations.
+
+"""
+
+
 import random
 import socket
 import sys
