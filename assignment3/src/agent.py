@@ -125,22 +125,8 @@ class GameTree:
         else:
             return 0
 
-    # def board_to_index(self, board):
-    #     index = 0
-    #     n = len(board)
-    #     for i in range(n):
-    #         index += board[i] * (3 ** (n-1-i))
-    #     return index
-
-    # def sub_board_to_index(self, sub_board):
-    #     index = 0
-    #     n = len(sub_board)
-    #     for i in range(n):
-    #         index += sub_board[i] * (3 ** (n-1-i))
-    #     return index
-
     def cal_value(self, sub_board):
-        index = str(sub_board)
+        index = hash(tuple(sub_board))
         if index in sub_board_values:
             return sub_board_values[index]
 
@@ -151,8 +137,8 @@ class GameTree:
         return value
 
     def cal_board_value(self, board):
-        index = str(board)
-        if index in board_values:  # 注意：这里也可以使用一个专门的board_values字典
+        index = tuple(map(tuple, board))
+        if index in board_values:
             return board_values[index]
 
         value = 0
@@ -236,9 +222,9 @@ def update_depth(round):
     elif round < 10:
         return 5
     elif round < 20:
-        return 5
-    elif round < 40:
-        return 6
+        return 7
+    elif round < 25:
+        return 9
     elif round < 50:
         return 10
     else:
