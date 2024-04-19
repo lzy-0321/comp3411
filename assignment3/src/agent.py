@@ -22,7 +22,7 @@ in all optimal choices (max value), we randomly select one move to avoid always 
 
 After implementing AB pruning search, we found that calculating the node values directly wasn't good enough. Therefore, we switched 
 to use heuristics. This involved counting the number of agent's, opponent's, and empty cells in each row, column, and diagonal of the 
-current mini-board. We also considered the positions of these cells to calculate a heuristic value.
+current sub-board. We also considered the positions of these cells to calculate a heuristic value.
 
 In this heuristic approach:
 - The node in the center of the board carry have highest weight.
@@ -39,7 +39,11 @@ in the beginning which may lead to timeout.
 Therefore, the depth of the AB tree is adjusted dynamically based on the current game round. As the game processing and more moves are
 made (the game round increases), we increase the depth of the tree search. 
 
--------------------------请加在这里
+When max depth is changed to a larger value, which means that there will be a larger tree to search, the time complexity will increase by 
+a lots of calculating the heuristic value. But actually, the situation in the sub-board may be as same as one of the previous sub-boards,
+so we use a dictionary to store the value of the sub-board to avoid calculating the same sub-board repeatedly. So we can use the hash value
+of the sub-board as the key to store the value of the sub-board. And for board value, we also use the hash value of the board to store the
+value of the whole board. And we use tuple for the key of the dictionary because the list is unhashable. 
 
 So far, our code can run up to level 8 without timeout, but the win rate is not 100%. We think the next improvement needed is in 
 the heuristic value calculation. It may require more detailed analysis of possible board states, but due to ddl is coming we do not 
@@ -200,7 +204,7 @@ class GameTree:
         return value
 
     def cal_board_value(self, board):
-        index = tuple(map(tuple, board))
+        index = hash(tuple(tuple(sub) for sub in board))
         if index in board_values:
             return board_values[index]
 
