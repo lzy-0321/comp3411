@@ -37,6 +37,7 @@ win_conditions = [
 
 center = [5]
 corners = [1, 3, 7, 9]
+middles = [2, 4, 6, 8]
 sub_board_values = {}
 board_values = {}
 
@@ -92,38 +93,80 @@ class GameTree:
         self.tree = {}
 
     def cal_value_condition(self, sub_board, condition):
+        agent_value = 0
+        agent_counter = 0
+        opponent_counter = 0
+        value = 1
+        center_value = 6
+        middle_value = 4
+        corner_value = 2
         point_1 = sub_board[condition[0]]
         point_2 = sub_board[condition[1]]
         point_3 = sub_board[condition[2]]
-        win, lose = 0, 0
-        rate = 1
+
         for point in [point_1, point_2, point_3]:
             if point == 1:
-                win += 1
+                agent_counter += 1
             elif point == 2:
-                lose += 1
+                opponent_counter += 1
 
-        if point_1 != 0 and point_1 in corners:
-            rate *= 2
-        if point_2 != 0 and point_2 in center:
-            rate *= 5
-        if point_3 != 0 and point_3 in corners:
-            rate *= 2
+        if point_2 in center and point_2 != 0:
+            agent_value += center_value
+        elif point_2 in middles and point_2 != 0:
+            agent_value += middle_value
+        if point_1 in corners and point_1 != 0:
+            agent_value += corner_value
+        if point_3 in corners and point_3 != 0:
+            agent_value += corner_value
 
-        if lose == 3:
-            return -1000*rate
-        elif win == 3:
-            return 10000*rate
-        elif win == 2 and lose == 0:
-            return 30*rate
-        elif win == 1 and lose == 0:
-            return 1*rate
-        elif win == 0 and lose == 2:
-            return -30*rate
-        elif win == 0 and lose == 1:
-            return -1*rate
+        if agent_counter == 3:
+            value = agent_value * 100000
+        elif agent_counter == 2 and opponent_counter == 0:
+            value = agent_value * 1000
+        elif agent_counter == 1 and opponent_counter == 0:
+            value = agent_value * 10
+        elif opponent_counter == 3:
+            value = agent_value * -100000
+        elif opponent_counter == 2 and agent_counter == 0:
+            value = agent_value * -1000
+        elif opponent_counter == 1 and agent_counter == 0:
+            value = agent_value * -10
         else:
-            return 0
+            value = 0
+        return value
+
+        # point_1 = sub_board[condition[0]]
+        # point_2 = sub_board[condition[1]]
+        # point_3 = sub_board[condition[2]]
+        # win, lose = 0, 0
+        # rate = 1
+        # for point in [point_1, point_2, point_3]:
+        #     if point == 1:
+        #         win += 1
+        #     elif point == 2:
+        #         lose += 1
+
+        # if point_1 != 0 and point_1 in corners:
+        #     rate *= 2
+        # if point_2 != 0 and point_2 in center:
+        #     rate *= 5
+        # if point_3 != 0 and point_3 in corners:
+        #     rate *= 2
+
+        # if lose == 3:
+        #     return -1000*rate
+        # elif win == 3:
+        #     return 10000*rate
+        # elif win == 2 and lose == 0:
+        #     return 30*rate
+        # elif win == 1 and lose == 0:
+        #     return 1*rate
+        # elif win == 0 and lose == 2:
+        #     return -30*rate
+        # elif win == 0 and lose == 1:
+        #     return -1*rate
+        # else:
+        #     return 0
 
     def cal_value(self, sub_board):
         index = hash(tuple(sub_board))
@@ -221,10 +264,12 @@ def update_depth(round):
         return 3
     elif round < 10:
         return 5
-    elif round < 20:
+    elif round < 17:
+        return 6
+    elif round < 23:
         return 7
     elif round < 25:
-        return 9
+        return 8
     elif round < 50:
         return 10
     else:
