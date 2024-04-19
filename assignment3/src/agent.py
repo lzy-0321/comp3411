@@ -264,7 +264,7 @@ def update_depth(round):
         return 3
     elif round < 10:
         return 5
-    elif round < 17:
+    elif round < 15:
         return 6
     elif round < 23:
         return 7
