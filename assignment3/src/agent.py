@@ -36,7 +36,8 @@ win_conditions = [
 corners = [1, 3, 7, 9]
 center = [5]
 
-sub_board_value = [None] * (3 ** 10)  # 初始化列表，假设初始值为 None
+sub_board_values = {}
+board_values = {}
 
 # print a row
 def print_board_row(bd, a, b, c, i, j, k):
@@ -100,7 +101,7 @@ class GameNode:
         self.value = 0
         self.finished = False
 
-    def small_board_value_cal(self, sub_board, condition):
+    def cal_value_condition(self, sub_board, condition):
         point_1 = sub_board[condition[0]]
         point_2 = sub_board[condition[1]]
         point_3 = sub_board[condition[2]]
@@ -134,24 +135,26 @@ class GameNode:
         else:
             return 0
 
-    # value is the number of possible winning conditions that can be formed
-    def sub_board_to_index(self, sub_board):
-        index = 0
-        n = len(sub_board)
-        for i in range(n):
-            index += sub_board[i] * (3 ** (n-1-i))
-        return index
+    def cal_value(self, sub_board):
+        index = hash(tuple(sub_board))
+        if index in sub_board_values:
+            return sub_board_values[index]
 
-    def cal_value(self):
+        value = 0
+        for condition in win_conditions:
+            value += self.cal_value_condition(sub_board, condition)
+        sub_board_values[index] = value
+        return value
+
+    def cal_board_value(self, board):
+        index = tuple(map(tuple, board))
+        if index in board_values:
+            return board_values[index]
+
         value = 0
         for i in range(1, 10):
-            sub_board = self.board[i]
-            index = self.sub_board_to_index(sub_board)
-            if sub_board_value[index] is not None:
-                value += sub_board_value[index]
-            for condition in win_conditions:
-                value += self.small_board_value_cal(sub_board, condition)
-            sub_board_value[index] = value
+            value += self.cal_value(board[i])
+        board_values[index] = value
         return value
 
     def is_finished(self):
@@ -201,25 +204,10 @@ class GameTree:
                 new_board[current_node.L][i] = player
                 new_node = GameNode(new_board, current_node.L, i, player, current_node)
                 if current_depth == max_depth:
-                    new_node_value = new_node.cal_value()
+                    new_node_value = new_node.cal_board_value(new_board)
                     new_node.value = new_node_value
                 current_node.children.append(new_node)
                 self._generate_tree_recursive(new_node, current_depth + 1, 3 - player)
-
-    # def update_value(self, node, depth):
-    #     if not node.children or depth == 0:
-    #         return node.value
-    #     elif node.player == 1:
-    #         node.value = min(self.update_value(child, depth - 1) for child in node.children)
-    #     else:
-    #         node.value = max(self.update_value(child, depth - 1) for child in node.children)
-    #     return node.value
-
-    # def minmax_move(self):
-    #     print(self.root)
-    #     self.update_value(self.root, max_depth)
-    #     # return node.L which has the maximum value
-    #     return max(self.root.children, key=lambda x: x.value).L
 
     def print_tree(self, file):
         self._print_tree_recursive(self.root, 0, file)
@@ -232,12 +220,17 @@ class GameTree:
 
     # alpha-beta pruning
     def alpha_beta(self, depth):
-        value = []
+        choice = []
+        max_value = -np.inf
         for child in self.root.children:
-            value.append(self.max_value(child, -np.inf, np.inf, depth))
-        min_value = min(value)
+            value = self.min_value(child, -np.inf, np.inf, depth)
+            if value > max_value:
+                max_value = value
+                choice =[child.L]
+            elif value == max_value:
+                choice.append(child.L)
         # if multiple moves have the same value, choose the random one
-        return np.random.choice([child.L for child in self.root.children if child.value == min_value])
+        return np.random.choice(choice)
 
     def max_value(self, node, alpha, beta, depth):
         if depth == 0 or self.isTerminal(node):
@@ -279,13 +272,13 @@ def update_depth(round):
     if round < 3:
         return 3
     elif round < 10:
-        return 3
-    elif round < 20:
         return 5
-    elif round < 40:
+    elif round < 20:
+        return 6
+    elif round < 25:
         return 7
     elif round < 50:
-        return 9
+        return 10
     else:
         return 11
 
