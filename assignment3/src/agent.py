@@ -92,11 +92,26 @@ class GameTree:
     def __init__(self):
         self.tree = {}
 
+    def final_value(self, agent_counter, opponent_counter):
+        if agent_counter == 3:
+            return 100000
+        elif agent_counter == 2 and opponent_counter == 0:
+            return 1000
+        elif agent_counter == 1 and opponent_counter == 0:
+            return 10
+        elif opponent_counter == 3:
+            return -100000
+        elif opponent_counter == 2 and agent_counter == 0:
+            return -1000
+        elif opponent_counter == 1 and agent_counter == 0:
+            return -10
+        else:
+            return 0
+
     def cal_value_condition(self, sub_board, condition):
         agent_value = 0
         agent_counter = 0
         opponent_counter = 0
-        value = 1
         center_value = 6
         middle_value = 4
         corner_value = 2
@@ -119,54 +134,7 @@ class GameTree:
         if point_3 in corners and point_3 != 0:
             agent_value += corner_value
 
-        if agent_counter == 3:
-            value = agent_value * 100000
-        elif agent_counter == 2 and opponent_counter == 0:
-            value = agent_value * 1000
-        elif agent_counter == 1 and opponent_counter == 0:
-            value = agent_value * 10
-        elif opponent_counter == 3:
-            value = agent_value * -100000
-        elif opponent_counter == 2 and agent_counter == 0:
-            value = agent_value * -1000
-        elif opponent_counter == 1 and agent_counter == 0:
-            value = agent_value * -10
-        else:
-            value = 0
-        return value
-
-        # point_1 = sub_board[condition[0]]
-        # point_2 = sub_board[condition[1]]
-        # point_3 = sub_board[condition[2]]
-        # win, lose = 0, 0
-        # rate = 1
-        # for point in [point_1, point_2, point_3]:
-        #     if point == 1:
-        #         win += 1
-        #     elif point == 2:
-        #         lose += 1
-
-        # if point_1 != 0 and point_1 in corners:
-        #     rate *= 2
-        # if point_2 != 0 and point_2 in center:
-        #     rate *= 5
-        # if point_3 != 0 and point_3 in corners:
-        #     rate *= 2
-
-        # if lose == 3:
-        #     return -1000*rate
-        # elif win == 3:
-        #     return 10000*rate
-        # elif win == 2 and lose == 0:
-        #     return 30*rate
-        # elif win == 1 and lose == 0:
-        #     return 1*rate
-        # elif win == 0 and lose == 2:
-        #     return -30*rate
-        # elif win == 0 and lose == 1:
-        #     return -1*rate
-        # else:
-        #     return 0
+        return self.final_value(agent_counter, opponent_counter) + agent_value
 
     def cal_value(self, sub_board):
         index = hash(tuple(sub_board))
@@ -242,21 +210,31 @@ class GameTree:
 
         # we assume that we are the player 1
         if player == 1:
-            for move in moves:
-                board[L][move] = player
-                alpha = max(alpha, self.alpha_beta_generate(board, L, move, 2, alpha, beta, deep + 1))
-                board[L][move] = 0
-                if alpha >= beta:
-                    return alpha
-            return alpha
+            return self.max_value(board, k, L, player, alpha, beta, deep, moves)
         else:
-            for move in moves:
-                board[L][move] = player
-                beta = min(beta, self.alpha_beta_generate(board, L, move, 1, alpha, beta, deep + 1))
-                board[L][move] = 0
-                if alpha >= beta:
-                    return beta
-            return beta
+            return self.min_value(board, k, L, player, alpha, beta, deep, moves)
+
+    def max_value(self, board, k, L, player, alpha, beta, deep, moves):
+        value = -np.inf
+        for move in moves:
+            board[L][move] = player
+            value = max(value, self.alpha_beta_generate(board, L, move, 2, alpha, beta, deep + 1))
+            board[L][move] = 0
+            if value >= beta:
+                return value
+            alpha = max(alpha, value)
+        return value
+
+    def min_value(self, board, k, L, player, alpha, beta, deep, moves):
+        value = np.inf
+        for move in moves:
+            board[L][move] = player
+            value = min(value, self.alpha_beta_generate(board, L, move, 1, alpha, beta, deep + 1))
+            board[L][move] = 0
+            if value <= alpha:
+                return value
+            beta = min(beta, value)
+        return value
 
 # update the max depth of the minmax tree
 def update_depth(round):
@@ -264,11 +242,11 @@ def update_depth(round):
         return 3
     elif round < 10:
         return 5
-    elif round < 17:
+    elif round < 15:
         return 6
-    elif round < 23:
+    elif round < 18:
         return 7
-    elif round < 25:
+    elif round < 21:
         return 8
     elif round < 50:
         return 10
